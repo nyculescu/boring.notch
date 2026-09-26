@@ -38,6 +38,9 @@ struct ContentView: View {
     @Namespace var albumArtNamespace
 
     @Default(.showNotHumanFace) var showNotHumanFace
+    /// Observed, not just read, so switching it from the notch's menu
+    /// changes the open notch right away.
+    @Default(.compactMode) private var compactMode
 
     // Use standardized animations from StandardAnimations enum
     private let animationSpring = StandardAnimations.interactive
@@ -60,7 +63,7 @@ struct ContentView: View {
     /// Compact mode gets a rounder opened shape (35 vs 19) — at its smaller
     /// size the standard radius reads square rather than pill-like.
     private var openedInsets: (top: CGFloat, bottom: CGFloat) {
-        Defaults[.compactMode] ? compactCornerRadiusInsets.opened : cornerRadiusInsets.opened
+        compactMode ? compactCornerRadiusInsets.opened : cornerRadiusInsets.opened
     }
 
     private var topCornerRadius: CGFloat {
@@ -129,7 +132,7 @@ struct ContentView: View {
     /// comes from its content's fixed frame (compactOpenContentSize) instead.
     private var openNotchHeight: CGFloat? {
         if notificationManager.activeNotification != nil { return 132 }
-        return Defaults[.compactMode] ? nil : vm.notchSize.height
+        return compactMode ? nil : vm.notchSize.height
     }
 
     /// Compact mode has no header: it spans the full notch width, and
@@ -138,7 +141,7 @@ struct ContentView: View {
     private var showsHeader: Bool {
         vm.notchState == .open
             && notificationManager.activeNotification == nil
-            && !Defaults[.compactMode]
+            && !compactMode
     }
 
     /// The activity currently on top of the stack — what the chin has to be
@@ -355,6 +358,8 @@ struct ContentView: View {
                             }
                         }
                         .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
+                        // The same switch as in Settings > Notch, a click away.
+                        Toggle("Compact mode", isOn: $compactMode.animation(.smooth))
                         //                    Button("Edit") { // Doesnt work....
                         //                        let dn = DynamicNotch(content: EditPanelView())
                         //                        dn.toggle()
@@ -547,7 +552,7 @@ struct ContentView: View {
                     if let notification = notificationManager.activeNotification {
                         NotificationExpandedView(notification: notification)
                             .id(notification.id)
-                    } else if Defaults[.compactMode] {
+                    } else if compactMode {
                         CompactNotchView(
                             albumArtNamespace: albumArtNamespace,
                             horizontalMediaGestureFeedback: horizontalMediaGestureFeedback,
