@@ -351,17 +351,17 @@ final class NotchWindowManager {
     }
 
     private func handleDragEntersNotchRegion(onScreen screen: NSScreen) {
-        guard Defaults[.boringShelf] else { return }
+        guard let dropTarget = NotchDrop.target else { return }
         guard let uuid = screen.displayUUID else { return }
 
         let coordinator = BoringViewCoordinator.shared
         if Defaults[.showOnAllDisplays], let viewModel = contexts[uuid]?.viewModel {
             if viewModel.open() {
-                coordinator.currentView = .shelf
+                coordinator.currentView = dropTarget
             }
         } else if !Defaults[.showOnAllDisplays], let windowScreen = primaryWindow?.screen, screen == windowScreen {
             if primaryViewModel.open() {
-                coordinator.currentView = .shelf
+                coordinator.currentView = dropTarget
             }
         }
     }

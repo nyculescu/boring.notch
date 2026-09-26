@@ -95,28 +95,55 @@ final class ClipboardHistoryManager: ObservableObject {
                 at: 0
             )
         }
-        let content = item.content
+        writeToPasteboard(item.content)
+    }
+
+    /// Adds what was dropped on the notch and puts it on the pasteboard, as if
+    /// it had just been copied, so it's ready to paste anywhere.
+    func addDropped(_ providers: [NSItemProvider]) {
+        Task { @MainActor [weak self] in
+            guard let dropped = await ClipboardDropReader.read(providers), let self else { return }
+            switch dropped {
+            case .content(let content):
+                self.add(content)
+            case .image(let data):
+                let store = self.store
+                self.storageQueue.async { [weak self] in
+                    do {
+                        let image = try store.saveImage(data)
+                        Task { @MainActor in self?.add(.image(image)) }
+                    } catch {
+                        Log.clipboard.error("Couldn't save a dropped image: \(error.localizedDescription, privacy: .public)")
+                    }
+                }
+            }
+        }
+    }
+
+    private func add(_ content: ClipboardItem.Content) {
+        updateItems { items in
+            items.removeAll { $0.content == content }
+            // The drag usually starts in the frontmost app, Finder for files.
+            items.insert(ClipboardItem(content: content, sourceBundleIdentifier: frontmostBundleIdentifier), at: 0)
+        }
+        writeToPasteboard(content)
+    }
+
+    private func writeToPasteboard(_ content: ClipboardItem.Content) {
         let store = store
         pasteboardQueue.async { [weak self] in
             let pasteboard = NSPasteboard.general
             switch content {
             case .text(let text):
-                pasteboard.clearContents()
-                pasteboard.setString(text, forType: .string)
+                ClipboardPasteboardWriter.write(text: text, to: pasteboard)
             case .files(let urls):
-                pasteboard.clearContents()
-                pasteboard.writeObjects(urls.map { $0 as NSURL })
+                ClipboardPasteboardWriter.write(files: urls, to: pasteboard)
             case .image(let image):
                 guard let png = try? Data(contentsOf: store.imageURL(for: image)) else {
                     Log.clipboard.error("A saved clipboard image is missing")
                     return
                 }
-                pasteboard.clearContents()
-                pasteboard.setData(png, forType: .png)
-                // Older apps only take TIFF.
-                if let tiff = NSBitmapImageRep(data: png)?.tiffRepresentation {
-                    pasteboard.setData(tiff, forType: .tiff)
-                }
+                ClipboardPasteboardWriter.write(png: png, to: pasteboard)
             }
             let changeCount = pasteboard.changeCount
             Task { @MainActor in

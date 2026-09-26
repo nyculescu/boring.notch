@@ -382,9 +382,9 @@ struct ContentView: View {
             anyDropDebounceTask?.cancel()
 
             if isTargeted {
-                if Defaults[.boringShelf] && vm.notchState == .closed {
+                if let dropTarget = NotchDrop.target, vm.notchState == .closed {
                     if doOpen() {
-                        coordinator.currentView = .shelf
+                        coordinator.currentView = dropTarget
                     }
                 }
                 return
@@ -778,13 +778,13 @@ struct ContentView: View {
     var dragDetector: some View {
         @Bindable var dropInteraction = vm.dropInteraction
 
-        if Defaults[.boringShelf] && vm.notchState == .closed && !shouldDisplayNowPlayingFallbackNotice {
+        if NotchDrop.target != nil && vm.notchState == .closed && !shouldDisplayNowPlayingFallbackNotice {
             Color.clear
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
         .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $dropInteraction.dragDetectorTargeting) { providers in
             dropInteraction.dropEvent = true
-            ShelfStateViewModel.shared.load(providers)
+            NotchDrop.accept(providers)
             return true
         }
         } else {

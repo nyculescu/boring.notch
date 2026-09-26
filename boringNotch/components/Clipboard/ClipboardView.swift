@@ -8,8 +8,10 @@
 import AppKit
 import Defaults
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ClipboardView: View {
+    @EnvironmentObject private var vm: BoringViewModel
     @ObservedObject private var clipboard = ClipboardHistoryManager.shared
     @State private var copiedItemID: UUID?
     @State private var copiedResetTask: Task<Void, Never>?
@@ -23,11 +25,13 @@ struct ClipboardView: View {
     private let compactCardWidth: CGFloat = 84
 
     var body: some View {
+        @Bindable var interaction = vm.dropInteraction
+
         Group {
             if clipboard.isAccessDenied {
                 message(icon: "hand.raised", text: "Boring Notch isn't allowed to read the clipboard", showsSettingsButton: true)
             } else if clipboard.items.isEmpty {
-                message(icon: "doc.on.clipboard", text: "Copied text, images and files will appear here", showsSettingsButton: false)
+                message(icon: "doc.on.clipboard", text: "Copy something, or drop files here", showsSettingsButton: false)
             } else if compactMode {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 8) {
@@ -48,7 +52,33 @@ struct ClipboardView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay {
+            if interaction.dropZoneTargeting {
+                dropHighlight
+            }
+        }
+        // Dropping here works like copying: the item joins the history and the clipboard.
+        .onDrop(of: [.fileURL, .url, .image, .utf8PlainText, .plainText], isTargeted: $interaction.dropZoneTargeting) { providers in
+            interaction.dropEvent = true
+            clipboard.addDropped(providers)
+            return true
+        }
         .onAppear { clipboard.checkNow() }
+    }
+
+    private var dropHighlight: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .stroke(Color.accentColor.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [8]))
+            .overlay {
+                Label("Drop to copy", systemImage: "arrow.down.doc")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.black.opacity(0.7), in: Capsule())
+            }
+            .allowsHitTesting(false)
+            .transition(.opacity)
     }
 
     private func cell(for item: ClipboardItem) -> some View {

@@ -18,6 +18,8 @@ mkdir -p "$work"
 sources=(
     boringNotch/components/Clipboard/ClipboardItem.swift
     boringNotch/components/Clipboard/ClipboardPasteboardReader.swift
+    boringNotch/components/Clipboard/ClipboardPasteboardWriter.swift
+    boringNotch/components/Clipboard/ClipboardDropReader.swift
     boringNotch/components/Clipboard/ClipboardHistoryStore.swift
 )
 classes=()

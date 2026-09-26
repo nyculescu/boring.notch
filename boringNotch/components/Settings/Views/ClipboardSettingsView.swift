@@ -38,7 +38,7 @@ struct ClipboardSettingsView: View {
             } header: {
                 Text("General")
             } footer: {
-                footnote("Text, images (screenshots included) and files are recorded; items that password managers mark as confidential never are. History is saved on this Mac, outside backups, and stays when you quit, restart or turn it off. Clear History deletes it.")
+                footnote("Text, images (screenshots included) and files are recorded; items that password managers mark as confidential never are. Drop files, images or text on the notch to add them and copy them in one go; pasting files in Finder copies them, and in a text field pastes their paths. History is saved on this Mac, outside backups, and stays when you quit, restart or turn it off. Clear History deletes it.")
             }
 
             Section {
