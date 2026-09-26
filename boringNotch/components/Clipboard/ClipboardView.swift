@@ -6,15 +6,21 @@
 //
 
 import AppKit
+import Defaults
 import SwiftUI
 
 struct ClipboardView: View {
     @ObservedObject private var clipboard = ClipboardHistoryManager.shared
     @State private var copiedItemID: UUID?
     @State private var copiedResetTask: Task<Void, Never>?
+    @Default(.compactMode) private var compactMode
 
     /// Five columns by two rows fits the default ten entries without scrolling.
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+    /// Compact mode's panel is too short for the grid, so entries run in a
+    /// single row of cards that scrolls sideways, like the shelf. Two cards
+    /// and the edge of a third fit, which shows there's more to scroll to.
+    private let compactCardWidth: CGFloat = 84
 
     var body: some View {
         Group {
@@ -22,17 +28,20 @@ struct ClipboardView: View {
                 message(icon: "hand.raised", text: "Boring Notch isn't allowed to read the clipboard", showsSettingsButton: true)
             } else if clipboard.items.isEmpty {
                 message(icon: "doc.on.clipboard", text: "Copied text, images and files will appear here", showsSettingsButton: false)
+            } else if compactMode {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 8) {
+                        ForEach(clipboard.items) { item in
+                            cell(for: item)
+                                .frame(width: compactCardWidth)
+                        }
+                    }
+                }
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(clipboard.items) { item in
-                            ClipboardItemCell(
-                                item: item,
-                                thumbnail: item.image.flatMap { clipboard.thumbnail(for: $0) },
-                                isCopied: item.id == copiedItemID
-                            )
-                                .onTapGesture { copy(item) }
-                                .contextMenu { contextMenu(for: item) }
+                            cell(for: item)
                         }
                     }
                 }
@@ -40,6 +49,17 @@ struct ClipboardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { clipboard.checkNow() }
+    }
+
+    private func cell(for item: ClipboardItem) -> some View {
+        ClipboardItemCell(
+            item: item,
+            thumbnail: item.image.flatMap { clipboard.thumbnail(for: $0) },
+            isCopied: item.id == copiedItemID,
+            isCompact: compactMode
+        )
+            .onTapGesture { copy(item) }
+            .contextMenu { contextMenu(for: item) }
     }
 
     private func copy(_ item: ClipboardItem) {
@@ -68,15 +88,16 @@ struct ClipboardView: View {
     }
 
     private func message(icon: String, text: LocalizedStringKey, showsSettingsButton: Bool) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: compactMode ? 6 : 10) {
             Image(systemName: icon)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.gray)
                 .imageScale(.large)
             Text(text)
                 .foregroundStyle(.gray)
-                .font(.system(.title3, design: .rounded))
+                .font(.system(compactMode ? .callout : .title3, design: .rounded))
                 .fontWeight(.medium)
+                .multilineTextAlignment(.center)
             if showsSettingsButton {
                 Button("Open Privacy Settings") {
                     ClipboardHistoryManager.openPrivacySettings()
@@ -92,6 +113,9 @@ private struct ClipboardItemCell: View {
     let item: ClipboardItem
     let thumbnail: NSImage?
     let isCopied: Bool
+    /// Compact mode's cards fill their row's height, which leaves room for
+    /// more lines of text than a grid cell has.
+    let isCompact: Bool
     @State private var isHovering = false
 
     private let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -114,7 +138,8 @@ private struct ClipboardItemCell: View {
             .foregroundStyle(.gray)
         }
         .padding(6)
-        .frame(height: 54)
+        .frame(height: isCompact ? nil : 54)
+        .frame(maxHeight: isCompact ? .infinity : nil)
         .background(shape.fill(Color.white.opacity(isHovering ? 0.16 : 0.08)))
         .overlay {
             if isCopied {
@@ -169,7 +194,7 @@ private struct ClipboardItemCell: View {
         Text(item.previewText)
             .font(.system(size: 11))
             .foregroundStyle(.white)
-            .lineLimit(2)
+            .lineLimit(isCompact ? 4 : 2)
     }
 }
 

@@ -5,6 +5,7 @@
 //  Created by Alexander on 2025-09-24.
 //
 
+import Defaults
 import SwiftUI
 
 struct ShelfItemView: View {
@@ -14,8 +15,10 @@ struct ShelfItemView: View {
     @StateObject private var viewModel: ShelfItemViewModel
     @State private var selectionState: ShelfItemSelectionState
     @State private var debouncedDropTarget = false
+    @Default(.compactMode) private var compactMode
 
     private var isSelected: Bool { selectionState.isSelected }
+    private var metrics: Metrics { compactMode ? .compact : .standard }
 
     private var highlight: HighlightPresentation {
         if debouncedDropTarget {
@@ -79,9 +82,9 @@ struct ShelfItemView: View {
             iconView
             textView
         }
-        .frame(width: 105)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 5)
+        .frame(width: metrics.width)
+        .padding(.vertical, metrics.verticalPadding)
+        .padding(.horizontal, metrics.horizontalPadding)
         .background(backgroundView)
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.1), value: debouncedDropTarget)
@@ -105,19 +108,19 @@ struct ShelfItemView: View {
     private var iconView: some View {
         Image(nsImage: viewModel.thumbnail ?? item.icon)
             .resizable().scaledToFit()
-            .frame(width: 56, height: 56)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .frame(width: metrics.iconSize, height: metrics.iconSize)
+            .clipShape(RoundedRectangle(cornerRadius: metrics.iconCornerRadius))
             .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
     }
 
     private var textView: some View {
         Text(item.displayName)
-            .font(.system(size: 12, weight: .medium))
+            .font(.system(size: metrics.nameFontSize, weight: .medium))
             .foregroundStyle(.primary)
-            .lineLimit(2)
+            .lineLimit(metrics.nameLines)
             .truncationMode(.middle)
             .multilineTextAlignment(.center)
-            .frame(height: 30, alignment: .top)
+            .frame(height: metrics.nameHeight, alignment: .top)
     }
 
     private var backgroundView: some View {
@@ -136,5 +139,40 @@ struct ShelfItemView: View {
         let fill: Color
         let stroke: Color
         let lineWidth: CGFloat
+    }
+
+    private struct Metrics {
+        let width: CGFloat
+        let verticalPadding: CGFloat
+        let horizontalPadding: CGFloat
+        let iconSize: CGFloat
+        let iconCornerRadius: CGFloat
+        let nameFontSize: CGFloat
+        let nameLines: Int
+        let nameHeight: CGFloat
+
+        static let standard = Metrics(
+            width: 105,
+            verticalPadding: 10,
+            horizontalPadding: 5,
+            iconSize: 56,
+            iconCornerRadius: 12,
+            nameFontSize: 12,
+            nameLines: 2,
+            nameHeight: 30
+        )
+
+        /// A smaller icon over one line of name: 61pt tall, to fit the 80pt
+        /// the compact shelf's scroll area has.
+        static let compact = Metrics(
+            width: 60,
+            verticalPadding: 5,
+            horizontalPadding: 3,
+            iconSize: 36,
+            iconCornerRadius: 8,
+            nameFontSize: 10,
+            nameLines: 1,
+            nameHeight: 13
+        )
     }
 }

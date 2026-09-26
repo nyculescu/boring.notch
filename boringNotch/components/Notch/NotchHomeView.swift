@@ -619,19 +619,41 @@ struct MusicSliderView: View {
         case remaining
     }
 
-    var body: some View {
-        VStack {
-            sliderCore
-                .frame(height: sliderFrameHeight, alignment: .center)
+    var timestampPlacement: TimestampPlacement = .below
 
-            HStack {
-                Text(timeString(from: sliderValue))
-                Spacer()
-                Text(trailingTimeText)
+    enum TimestampPlacement {
+        case below
+        /// Either side of the slider, in one row — for compact mode's
+        /// player, which has no height to spare for a row of labels.
+        case inline
+    }
+
+    var body: some View {
+        Group {
+            switch timestampPlacement {
+            case .below:
+                VStack {
+                    sliderCore
+                        .frame(height: sliderFrameHeight, alignment: .center)
+
+                    HStack {
+                        timeLabel(timeString(from: sliderValue))
+                        Spacer()
+                        timeLabel(trailingTimeText)
+                    }
+                }
+            case .inline:
+                // Monospaced digits so the slider doesn't twitch as the
+                // labels' widths change every second.
+                HStack(spacing: 6) {
+                    timeLabel(timeString(from: sliderValue))
+                        .monospacedDigit()
+                    sliderCore
+                        .frame(height: sliderFrameHeight, alignment: .center)
+                    timeLabel(trailingTimeText)
+                        .monospacedDigit()
+                }
             }
-            .fontWeight(.medium)
-            .foregroundColor(timeLabelColor)
-            .font(.caption)
         }
         .onChange(of: currentDate) {
            guard !dragging, timestampDate.timeIntervalSince(lastDragged) > -1 else { return }
@@ -655,6 +677,13 @@ struct MusicSliderView: View {
     private var timeLabelColor: Color {
         Defaults[.playerColorTinting]
             ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6) : .gray
+    }
+
+    private func timeLabel(_ text: String) -> Text {
+        Text(text)
+            .fontWeight(.medium)
+            .foregroundColor(timeLabelColor)
+            .font(.caption)
     }
 
     private var trailingTimeText: String {

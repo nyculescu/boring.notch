@@ -2,26 +2,69 @@
 //  CompactHomeView.swift
 //  boringNotch
 //
-//  A smaller open-notch layout: just the now-playing essentials — art,
-//  title, scrubber, transport — with no tab bar, calendar or mirror.
+//  Compact mode's opened panel: a rail of tabs beside a smaller home, shelf
+//  or clipboard. The home tab holds just the now-playing essentials — art,
+//  title, scrubber, transport — with no calendar or mirror.
 //
-//  Layout and proportions follow Atoll's MinimalisticMusicPlayerView
+//  The player started from Atoll's MinimalisticMusicPlayerView
 //  (https://github.com/Ebullioscopic/Atoll, GPL-3.0, itself a boring.notch
-//  fork): 50pt album art, 12/10pt title and artist, a fixed-width
-//  visualizer block on the right sized to match the trailing time label so
-//  the bars centre over it, a progress row, and a transport row.
+//  fork) — 12/10pt title and artist, a visualizer to their right, then a
+//  transport row — and is packed tighter here to fit a shorter panel: the
+//  scrubber sits beside the art under the title and artist, with its
+//  timestamps either side of the bar rather than below it.
 //
 //  Transport and slider are deliberately shared with the standard layout
 //  (MusicControlSlotButton / MusicSliderView) rather than ported separately,
 //  so seeking and the buttons behave identically in both layouts instead of
-//  drifting apart. The transport row is a fixed five here rather than the
-//  musicControlSlots preference — that preference exists to configure the
-//  full layout, and its default would leave compact mode without shuffle or
-//  media output.
+//  drifting apart.
 //
 
 import Defaults
 import SwiftUI
+
+/// Compact mode's opened content: the tab rail beside the selected tab, in
+/// one fixed frame so switching tabs never resizes the panel.
+struct CompactNotchView: View {
+    @EnvironmentObject var vm: BoringViewModel
+    @ObservedObject var coordinator = BoringViewCoordinator.shared
+    let albumArtNamespace: Namespace.ID
+    let horizontalMediaGestureFeedback: CGFloat
+    @Binding var isHoveringMusicArea: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            TabSelectionView(axis: .vertical)
+
+            selectedTab
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: compactOpenContentSize.width, height: compactOpenContentSize.height)
+    }
+
+    @ViewBuilder
+    private var selectedTab: some View {
+        switch coordinator.currentView {
+        case .home:
+            CompactHomeView(
+                albumArtNamespace: albumArtNamespace,
+                horizontalMediaGestureFeedback: horizontalMediaGestureFeedback
+            )
+            .onHover { hovering in
+                isHoveringMusicArea = hovering
+            }
+            .onDisappear {
+                isHoveringMusicArea = false
+            }
+        case .shelf:
+            ShelfView(
+                dropInteraction: vm.dropInteraction,
+                animation: vm.animation
+            )
+        case .clipboard:
+            ClipboardView()
+        }
+    }
+}
 
 struct CompactHomeView: View {
     @EnvironmentObject var vm: BoringViewModel
@@ -38,39 +81,34 @@ struct CompactHomeView: View {
     @Default(.musicControlSlots) private var slotConfig
     @Default(.musicControlSlotLimit) private var slotLimit
     @Default(.playerColorTinting) private var playerColorTinting
+    @Default(.showBatteryIndicator) private var showBatteryIndicator
     @Default(.showRemainingTime) private var showRemainingTime
 
-    private let albumArtWidth: CGFloat = 45
-    private let headerSpacing: CGFloat = 10
-    /// Matches the trailing time label's width in the row below, so the
-    /// visualizer's bars sit centred over "-0:00" rather than drifting.
-    private let vizBlockWidth: CGFloat = 42
-    private let vizBarWidth: CGFloat = 24
+    /// Also the header's height: title, artist and scrubber all fit beside
+    /// the art.
+    private let albumArtWidth: CGFloat = 44
+    private let headerSpacing: CGFloat = 8
+    private let batteryWidth: CGFloat = 24
+    private let vizBarWidth: CGFloat = 16
+
+    /// The column right of the title and artist: battery over visualizer.
+    /// BatteryView draws 1pt wider than its batteryWidth.
+    private var statusWidth: CGFloat {
+        showBatteryIndicator ? batteryWidth + 1 : vizBarWidth
+    }
 
     // No idle branch, deliberately. The standard layout has none either —
     // it renders whatever MusicManager last cached, so a paused or stopped
     // track keeps its art, title and scrub position. A "Nothing Playing"
     // placeholder here made compact mode lose state the full layout keeps.
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 4) {
             header
                 .frame(height: albumArtWidth)
 
-            progressRow
-                .padding(.top, 6)
-
             transport
-                .padding(.top, 2)
         }
-        .padding(.horizontal, 12)
-        // Atoll's 15/3 formula assumes the player is the whole panel; here
-        // a notch-clearance spacer sits above it, so these are trimmed to
-        // land the panel at the intended overall height. The 2pt bottom pad
-        // keeps the play/pause's hover fill from kissing the rounded corner
-        // without adding a visible band of empty space.
-        .padding(.top, 4)
-        .padding(.bottom, 2)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .buttonStyle(PlainButtonStyle())
     }
 
@@ -78,52 +116,55 @@ struct CompactHomeView: View {
 
     private var header: some View {
         GeometryReader { geo in
-            let textWidth = max(
-                0,
-                geo.size.width - albumArtWidth - headerSpacing - (vizBlockWidth + headerSpacing)
-            )
+            let columnWidth = max(0, geo.size.width - albumArtWidth - headerSpacing)
+            let textWidth = max(0, columnWidth - statusWidth - headerSpacing)
 
             HStack(alignment: .center, spacing: headerSpacing) {
                 compactAlbumArt
 
-                VStack(alignment: .leading, spacing: 1) {
-                    MarqueeText(
-                        musicManager.songTitle,
-                        font: .system(size: 12, weight: .semibold),
-                        color: .white,
-                        frameWidth: textWidth
-                    )
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top, spacing: headerSpacing) {
+                        // No spacing: title, artist and scrubber already fill
+                        // the art's height to within a point.
+                        VStack(alignment: .leading, spacing: 0) {
+                            MarqueeText(
+                                musicManager.songTitle,
+                                font: .system(size: 12, weight: .semibold),
+                                color: .white,
+                                frameWidth: textWidth
+                            )
 
-                    Text(musicManager.artistName)
-                        .font(.system(size: 10))
-                        .foregroundStyle(
-                            playerColorTinting
-                                ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
-                                : .gray
-                        )
-                        .lineLimit(1)
-                }
-                .frame(width: textWidth, alignment: .leading)
+                            Text(musicManager.artistName)
+                                .font(.system(size: 10))
+                                .foregroundStyle(
+                                    playerColorTinting
+                                        ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
+                                        : .gray
+                                )
+                                .lineLimit(1)
+                        }
+                        .frame(width: textWidth, alignment: .leading)
 
-                ZStack {
-                    MusicVisualizer(
-                        isPlaying: musicManager.isPlaying,
-                        tintColor: coloredSpectrogram
-                            ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
-                            : .gray
-                    )
-                    .frame(width: vizBarWidth, height: 16)
+                        status
+                            .frame(width: statusWidth)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    progressRow
                 }
-                .frame(width: vizBlockWidth)
+                .frame(width: columnWidth, height: albumArtWidth)
             }
         }
-        .overlay(alignment: .topTrailing) {
-            // Compact mode hides BoringHeader (it spans the full notch
-            // width), which took the battery with it. Overlaid rather than
-            // placed in the HStack so it doesn't steal width from the title.
-            if Defaults[.showBatteryIndicator] {
+    }
+
+    private var status: some View {
+        VStack(spacing: 4) {
+            // BoringHeader carries the battery in the standard layout;
+            // compact mode has no header, so it rides along here.
+            if showBatteryIndicator {
                 BoringBatteryView(
-                    batteryWidth: 24,
+                    batteryWidth: batteryWidth,
                     isCharging: batteryModel.isCharging,
                     isInLowPowerMode: batteryModel.isInLowPowerMode,
                     isPluggedIn: batteryModel.isPluggedIn,
@@ -132,10 +173,18 @@ struct CompactHomeView: View {
                     timeToFullCharge: batteryModel.timeToFullCharge,
                     timeToDischarge: batteryModel.timeToDischarge,
                     maxAdapterWatts: batteryModel.maxAdapterWatts,
-                    isForNotification: false
+                    isForNotification: false,
+                    showsPercentage: false
                 )
-                .offset(y: -14)
             }
+
+            MusicVisualizer(
+                isPlaying: musicManager.isPlaying,
+                tintColor: coloredSpectrogram
+                    ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6)
+                    : .gray
+            )
+            .frame(width: vizBarWidth, height: 12)
         }
     }
 
@@ -155,10 +204,9 @@ struct CompactHomeView: View {
                 playbackRate: musicManager.playbackRate,
                 isPlaying: musicManager.isPlaying,
                 onValueChange: { MusicManager.shared.seek(to: $0) },
-                trailingLabel: showRemainingTime ? .remaining : .duration
+                trailingLabel: showRemainingTime ? .remaining : .duration,
+                timestampPlacement: .inline
             )
-            .padding(.top, 5)
-            .frame(height: 36)
         }
         .onAppear { sliderValue = musicManager.elapsedTime }
     }
@@ -200,7 +248,7 @@ struct CompactHomeView: View {
 
             // Badge scaled to this art. AlbumArtView's is a fixed 30pt with
             // a +10/+10 offset, sized for the 120pt art in the full layout —
-            // on 50pt art it spills outside the corner.
+            // on art this small it spills outside the corner.
             if !musicManager.usingAppIconForArtwork {
                 appIcon(for: musicManager.bundleIdentifier ?? MediaAppBundleID.appleMusic)
                     .resizable().scaledToFit()

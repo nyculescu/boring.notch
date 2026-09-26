@@ -125,18 +125,16 @@ struct ContentView: View {
     /// Compact mode must use nil: this frame bounds hit-testing as well as
     /// layout, so any value shorter than the content leaves the transport
     /// row outside the hover region — moving toward the buttons registered
-    /// as a hover-exit and closed the notch. The compact panel's height is
-    /// controlled by its own internal padding instead, which is the honest
-    /// lever anyway.
+    /// as a hover-exit and closed the notch. The compact panel's height
+    /// comes from its content's fixed frame (compactOpenContentSize) instead.
     private var openNotchHeight: CGFloat? {
         if notificationManager.activeNotification != nil { return 132 }
         return Defaults[.compactMode] ? nil : vm.notchSize.height
     }
 
-    /// Compact mode drops the tab bar along with the tabs it switches
-    /// between — there's only the player to show, so a switcher would have
-    /// nothing to switch to. Also what keeps the panel narrow, since the
-    /// header spans the full notch width.
+    /// Compact mode has no header: it spans the full notch width, and
+    /// dropping it is what keeps the panel narrow. The tabs move to a rail
+    /// beside the content instead (CompactNotchView).
     private var showsHeader: Bool {
         vm.notchState == .open
             && notificationManager.activeNotification == nil
@@ -547,23 +545,11 @@ struct ContentView: View {
                         NotificationExpandedView(notification: notification)
                             .id(notification.id)
                     } else if Defaults[.compactMode] {
-                        // Player only — no tab switching, so currentView is
-                        // ignored here rather than offering a shelf the
-                        // compact layout has no room (or tab bar) for.
-                        // 336 = Atoll's 420 base less 20%, which also lands
-                        // within a few points of their Dynamic Island width
-                        // (340) — the tighter of their two compact sizes.
-                        CompactHomeView(
+                        CompactNotchView(
                             albumArtNamespace: albumArtNamespace,
-                            horizontalMediaGestureFeedback: horizontalMediaGestureFeedback
+                            horizontalMediaGestureFeedback: horizontalMediaGestureFeedback,
+                            isHoveringMusicArea: $isHoveringMusicArea
                         )
-                        .frame(width: 336)
-                        .onHover { hovering in
-                            isHoveringMusicArea = hovering
-                        }
-                        .onDisappear {
-                            isHoveringMusicArea = false
-                        }
                     } else {
                         switch coordinator.currentView {
                         case .home:
@@ -1035,9 +1021,6 @@ extension ContentView {
             return coordinator.musicLiveActivityEnabled && (musicManager.isPlaying || !musicManager.isPlayerIdle)
 
         case .open:
-            if Defaults[.compactMode] {
-                return !musicManager.isPlayerIdle && isHoveringMusicArea
-            }
             return coordinator.currentView == .home && !musicManager.isPlayerIdle && isHoveringMusicArea
         }
     }

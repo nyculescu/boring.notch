@@ -14,6 +14,7 @@ struct FileShareView: View {
     let dropInteraction: DropInteractionState
     @StateObject private var quickShare = QuickShareService.shared
     @Default(.quickShareProvider) var quickShareProvider: String
+    @Default(.compactMode) private var compactMode
 
     @State private var hostView: NSView?
     @State private var interactionNonce: UUID = .init()
@@ -65,7 +66,7 @@ struct FileShareView: View {
                         .fill(Color.white.opacity(
                             dropInteraction.dropZoneTargeting ? 0.11 : 0.09
                         ))
-                        .frame(width: 55, height: 55)
+                        .frame(width: circleSize, height: circleSize)
                     Group {
                         if let icon = quickShare.icon(for: selectedProvider.id, size: 34) {
                             Image(nsImage: icon)
@@ -74,7 +75,7 @@ struct FileShareView: View {
                             Image(systemName: "square.and.arrow.up")
                         }
                     }
-                    .frame(width: 34, height: 34)
+                    .frame(width: iconSize, height: iconSize)
                         .foregroundStyle(
                             dropInteraction.dropZoneTargeting ? Color.accentColor : Color.gray
                         )
@@ -84,12 +85,16 @@ struct FileShareView: View {
                         .animation(.spring(response: 0.36, dampingFraction: 0.7), value: dropInteraction.dropZoneTargeting)
                 }
 
-                Text(selectedProvider.id)
-                    .font(.system(.headline, design: .rounded))
-                    .foregroundColor(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
+                // Compact mode's narrow column has no room for the name;
+                // it moves to the tooltip instead.
+                if !compactMode {
+                    Text(selectedProvider.id)
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
             }
-            .padding(18)
+            .padding(compactMode ? 8 : 18)
 
             // Loading overlay
             if isProcessing || quickShare.isPickerOpen {
@@ -103,7 +108,13 @@ struct FileShareView: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: 12))
+        .conditionalModifier(compactMode) { view in
+            view.help(selectedProvider.id)
+        }
     }
+
+    private var circleSize: CGFloat { compactMode ? 36 : 55 }
+    private var iconSize: CGFloat { compactMode ? 22 : 34 }
 
     // MARK: - Actions
 

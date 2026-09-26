@@ -21,6 +21,13 @@ let cornerRadiusInsets: (opened: (top: CGFloat, bottom: CGFloat), closed: (top: 
 /// than a shrunken panel.
 let compactCornerRadiusInsets: (opened: (top: CGFloat, bottom: CGFloat), closed: (top: CGFloat, bottom: CGFloat)) = (opened: (top: 35, bottom: 35), closed: cornerRadiusInsets.closed)
 
+/// Compact mode's opened content: the tab rail and the selected tab, below
+/// the notch row and inside the panel's 12pt padding. Fixed rather than
+/// sized to content, so switching tabs never resizes the panel. The black
+/// panel comes out at 277×140 on a 32pt notch: 24pt wider than this, and
+/// taller by the notch row plus 20pt of spacing and bottom padding.
+let compactOpenContentSize: CGSize = .init(width: 253, height: 88)
+
 // Horizontal gap between closed-state live-activity content (album art / waveform)
 // and the physical notch edge. Without this margin the hardware bezel clips the
 // adjacent content since the spacer rect used to be narrower than the physical notch.

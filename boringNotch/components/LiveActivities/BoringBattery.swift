@@ -241,6 +241,9 @@ struct BoringBatteryView: View {
     var timeToDischarge: Int = 0
     var maxAdapterWatts: Int = 0
     @State var isForNotification: Bool = false
+    /// Compact mode's player fits the battery beside the song title, but not
+    /// its percentage as well.
+    var showsPercentage: Bool = true
 
     @State private var showPopupMenu: Bool = false
     @State private var isHoveringButton: Bool = false
@@ -256,7 +259,7 @@ struct BoringBatteryView: View {
             }
         }) {
             HStack {
-                if Defaults[.showBatteryPercentage] {
+                if showsPercentage && Defaults[.showBatteryPercentage] {
                     Text(
                         levelBattery / 100,
                         format: .percent.precision(.fractionLength(0))

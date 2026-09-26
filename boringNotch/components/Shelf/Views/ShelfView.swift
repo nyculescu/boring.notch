@@ -13,6 +13,7 @@ struct ShelfView: View {
     let dropInteraction: DropInteractionState
     let animation: Animation?
     @StateObject var shelfState = ShelfStateViewModel.shared
+    @Default(.compactMode) private var compactMode
 
     private let spacing: CGFloat = 8
 
@@ -24,14 +25,27 @@ struct ShelfView: View {
         @Bindable var interaction = dropInteraction
 
         ShelfQuickLookHost { quickLookService in
-            HStack(spacing: 12) {
-                FileShareView(dropInteraction: dropInteraction)
-                    .aspectRatio(1, contentMode: .fit)
+            HStack(spacing: compactMode ? 8 : 12) {
+                shareTarget
                 panel(quickLookService: quickLookService)
                     .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $interaction.dragDetectorTargeting) { providers in
                         handleDrop(providers: providers)
                     }
             }
+        }
+    }
+
+    /// Square in the standard layout. Compact mode's panel is so short that
+    /// a square would leave the shelf about one item's width, so there it's
+    /// a narrow column instead.
+    @ViewBuilder
+    private var shareTarget: some View {
+        if compactMode {
+            FileShareView(dropInteraction: dropInteraction)
+                .frame(width: 52)
+        } else {
+            FileShareView(dropInteraction: dropInteraction)
+                .aspectRatio(1, contentMode: .fit)
         }
     }
 
@@ -54,7 +68,7 @@ struct ShelfView: View {
                 ZStack {
                     ShelfBackgroundInteractionView()
                     content(quickLookService: quickLookService)
-                        .padding()
+                        .padding(.all, compactMode ? 12 : nil)
                 }
             }
             .transaction { transaction in
@@ -67,7 +81,7 @@ struct ShelfView: View {
 
         return Group {
             if shelfState.isEmpty {
-                VStack(spacing: 10) {
+                VStack(spacing: compactMode ? 6 : 10) {
                     Image(systemName: "tray.and.arrow.down")
                         .symbolVariant(.fill)
                         .symbolRenderingMode(.hierarchical)
@@ -76,7 +90,7 @@ struct ShelfView: View {
 
                     Text("Drop files here")
                         .foregroundStyle(.gray)
-                        .font(.system(.title3, design: .rounded))
+                        .font(.system(compactMode ? .callout : .title3, design: .rounded))
                         .fontWeight(.medium)
                 }
             } else {
