@@ -8,10 +8,15 @@
 import Foundation
 
 final class AppleScriptHelper {
+    /// NSAppleScript isn't safe to use from several threads at once, and
+    /// scripts start from many places (media controllers, the playback
+    /// handoff), so they run one at a time.
+    private static let queue = DispatchQueue(label: "boringNotch.AppleScript", qos: .userInitiated)
+
     @discardableResult
     class func execute(_ scriptText: String) async throws -> NSAppleEventDescriptor? {
         try await withCheckedThrowingContinuation { continuation in
-            Task.detached(priority: .userInitiated) {
+            queue.async {
                 let script = NSAppleScript(source: scriptText)
                 var error: NSDictionary?
                 if let descriptor = script?.executeAndReturnError(&error) {
