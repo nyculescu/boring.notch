@@ -83,7 +83,8 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedTab) {
-                ForEach(SettingsTab.allCases) { tab in
+                // No Shelf page: this version drops files on the Clipboard tab instead.
+                ForEach(SettingsTab.allCases.filter { $0 != .shelf }) { tab in
                     tabItem(tab)
                 }
             }

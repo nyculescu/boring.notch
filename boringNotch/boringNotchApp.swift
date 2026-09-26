@@ -131,7 +131,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let camera = CameraModel()
     var statusItem: NSStatusItem?
     @ObservedObject var coordinator = BoringViewCoordinator.shared
-    var quickShareService = QuickShareService.shared
     var closeNotchTask: Task<Void, Never>?
     private lazy var windowManager = NotchWindowManager(camera: camera)
     private var onboardingWindowController: NSWindowController?
@@ -328,6 +327,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // This version has no Shelf, and with it no AirDrop target: the
+        // Clipboard tab takes dropped files instead (see NotchDrop).
+        Defaults[.boringShelf] = false
         ClipboardHistoryManager.shared.startObservingPreferences()
 
         KeyboardShortcuts.onKeyDown(for: .openClipboardHistory) { [weak self] in
