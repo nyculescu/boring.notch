@@ -2,9 +2,9 @@
 //  CompactHomeView.swift
 //  boringNotch
 //
-//  Compact mode's opened panel: a rail of tabs beside a smaller home, shelf
-//  or clipboard. The home tab holds just the now-playing essentials — art,
-//  title, scrubber, transport — with no calendar or mirror.
+//  Compact mode's opened panel: a rail of tabs beside a smaller home, shelf,
+//  clipboard or sticky note. The home tab holds just the now-playing
+//  essentials — art, title, scrubber, transport — with no calendar or mirror.
 //
 //  The player started from Atoll's MinimalisticMusicPlayerView
 //  (https://github.com/Ebullioscopic/Atoll, GPL-3.0, itself a boring.notch
@@ -62,6 +62,8 @@ struct CompactNotchView: View {
             )
         case .clipboard:
             ClipboardView()
+        case .stickyNotes:
+            StickyNotesView()
         }
     }
 }

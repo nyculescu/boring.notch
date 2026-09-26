@@ -92,6 +92,7 @@ final class BoringViewCoordinator: ObservableObject {
     private var osdReplacementCancellable: AnyCancellable?
     private var boringShelfCancellable: AnyCancellable?
     private var clipboardHistoryCancellable: AnyCancellable?
+    private var stickyNotesCancellable: AnyCancellable?
     private var osdSourceCancellables: [AnyCancellable] = []
     private var notificationLiveActivityCancellable: AnyCancellable?
     private var uiEventCancellable: AnyCancellable?
@@ -198,6 +199,15 @@ final class BoringViewCoordinator: ObservableObject {
                 Task { @MainActor in
                     guard let self = self else { return }
                     if !change.newValue && self.currentView == .clipboard {
+                        self.currentView = .home
+                    }
+                }
+            }
+        stickyNotesCancellable = Defaults.publisher(.stickyNotesEnabled)
+            .sink { [weak self] change in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    if !change.newValue && self.currentView == .stickyNotes {
                         self.currentView = .home
                     }
                 }

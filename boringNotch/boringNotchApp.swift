@@ -154,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Flush debounced shelf persistence to avoid losing recent changes
         ShelfStateViewModel.shared.flushSync()
         ClipboardHistoryManager.shared.flushSync()
+        StickyNotesManager.shared.flushSync()
 
         NotificationCenter.default.removeObserver(self)
         if let observer = screenLockedObserver {
@@ -314,6 +315,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         do {
                             try await Task.sleep(for: .seconds(3))
                             await MainActor.run {
+                                // A sticky note being written in keeps the
+                                // notch until the pointer leaves it.
+                                guard !NotchKeyboardFocus.shared.holdsNotchOpen else { return }
                                 viewModel?.close()
                             }
                         } catch { }
@@ -337,6 +341,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.toggleClipboardHistory()
             }
         }
+
+        StickyNotesManager.shared.load()
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .showStickyNotesInNotch, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.showStickyNotes()
+            }
+        })
 
         // Sync notch height with real value on app launch if mode is matchRealNotchSize
         syncNotchHeightIfNeeded()
@@ -475,5 +488,24 @@ extension AppDelegate {
             return window
         }
         return window
+    }
+}
+
+// MARK: - Sticky notes
+
+extension AppDelegate {
+    /// Opens the notch under the pointer on the Sticky Notes tab, for a note
+    /// opened from the notes list. The note takes the keyboard, and the notch
+    /// stays open until it's done with it (see NotchKeyboardFocus).
+    @MainActor
+    fileprivate func showStickyNotes() {
+        guard Defaults[.stickyNotesEnabled] else { return }
+        let viewModel = viewModelUnderPointer()
+        closeNotchTask?.cancel()
+        closeNotchTask = nil
+        coordinator.currentView = .stickyNotes
+        if viewModel.notchState != .open {
+            viewModel.open()
+        }
     }
 }

@@ -514,6 +514,9 @@ extension Defaults.Keys {
     static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: true)
     static let clipboardHistoryLimit = Key<Int>("clipboardHistoryLimit", default: 10)
 
+    // MARK: Sticky Notes
+    static let stickyNotesEnabled = Key<Bool>("stickyNotesEnabled", default: true)
+
     // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
     static let hideAllDayEvents = Key<Bool>("hideAllDayEvents", default: false)

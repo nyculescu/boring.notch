@@ -297,6 +297,9 @@ struct ContentView: View {
                             .animation(.smooth(duration: 0.3), value: closedNotchContent)
                     }
                     .contentShape(Rectangle())
+                    // Lets a sticky note being typed in find the notch's real
+                    // area when key changes upset hover tracking (NotchKeyboardFocus).
+                    .background(NotchHoverArea())
                     .onHover { hovering in
                         handleHover(hovering)
                     }
@@ -565,6 +568,8 @@ struct ContentView: View {
                             )
                         case .clipboard:
                             ClipboardView()
+                        case .stickyNotes:
+                            StickyNotesView()
                         }
                     }
                 }
@@ -917,7 +922,8 @@ extension ContentView {
     }
 
     private func handleUpGesture(translation: CGFloat, phase: NSEvent.Phase) {
-        guard vm.notchState == .open && !vm.isHoveringCalendar else { return }
+        // Scrolling up a long sticky note mustn't close the notch.
+        guard vm.notchState == .open && !vm.isHoveringCalendar && coordinator.currentView != .stickyNotes else { return }
 
         withAnimation(animationSpring) {
             gestureProgress = (translation / Defaults[.gestureSensitivity]) * -20

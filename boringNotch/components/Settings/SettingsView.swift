@@ -17,6 +17,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case calendar
     case shelf
     case clipboard
+    case stickyNotes
     case mirror
     case battery
     case osd
@@ -40,6 +41,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: "Calendar"
         case .shelf: "Shelf"
         case .clipboard: "Clipboard"
+        case .stickyNotes: "Sticky Notes"
         case .mirror: "Mirror"
         case .battery: "Battery"
         case .osd: "OSD"
@@ -58,6 +60,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .calendar: .system("calendar")
         case .shelf: .system("tray.and.arrow.down")
         case .clipboard: .system("doc.on.clipboard")
+        case .stickyNotes: .system("note.text")
         case .mirror: .system("video")
         case .battery: .system("battery.100.bolt")
         case .osd: .system("dial.medium.fill")
@@ -115,6 +118,8 @@ struct SettingsView: View {
                     ShelfSettingsView()
                 case .clipboard:
                     ClipboardSettingsView()
+                case .stickyNotes:
+                    StickyNotesSettingsView()
                 case .mirror:
                     WebcamSettingsView(camera: camera)
                 case .shortcuts:

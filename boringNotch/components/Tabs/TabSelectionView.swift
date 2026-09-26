@@ -18,7 +18,8 @@ struct TabModel: Identifiable {
 let tabs = [
     TabModel(label: "Media", icon: "music.note", view: .home),
     TabModel(label: "Shelf", icon: "tray.fill", view: .shelf),
-    TabModel(label: "Clipboard", icon: "doc.on.clipboard.fill", view: .clipboard)
+    TabModel(label: "Clipboard", icon: "doc.on.clipboard.fill", view: .clipboard),
+    TabModel(label: "Sticky Notes", icon: "note.text", view: .stickyNotes)
 ]
 
 struct TabSelectionView: View {
@@ -27,6 +28,7 @@ struct TabSelectionView: View {
     @ObservedObject private var clipboard = ClipboardHistoryManager.shared
     @Default(.boringShelf) private var boringShelf
     @Default(.clipboardHistoryEnabled) private var clipboardHistoryEnabled
+    @Default(.stickyNotesEnabled) private var stickyNotesEnabled
     /// .vertical stacks the tabs into compact mode's rail: its panel is too
     /// narrow for a tab bar beside the notch.
     var axis: Axis = .horizontal
@@ -40,17 +42,19 @@ struct TabSelectionView: View {
             case .home: true
             case .shelf: boringShelf
             case .clipboard: clipboardHistoryEnabled
+            case .stickyNotes: stickyNotesEnabled
             }
         }
     }
 
     /// Tabs show when a tab besides Home has something to offer, or always if
     /// the user asked. Decided here rather than by each host, so the standard
-    /// header and the compact rail can't disagree.
+    /// header and the compact rail can't disagree. Sticky Notes always has a
+    /// note to write in.
     private var hasTabsToShow: Bool {
         let shelfTab = (!shelfState.isEmpty || coordinator.alwaysShowTabs) && boringShelf
         let clipboardTab = (!clipboard.items.isEmpty || coordinator.alwaysShowTabs) && clipboardHistoryEnabled
-        return shelfTab || clipboardTab
+        return shelfTab || clipboardTab || stickyNotesEnabled
     }
 
     var body: some View {

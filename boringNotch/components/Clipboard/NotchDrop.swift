@@ -28,7 +28,7 @@ enum NotchDrop {
             ShelfStateViewModel.shared.load(providers)
         case .clipboard:
             ClipboardHistoryManager.shared.addDropped(providers)
-        case .home, nil:
+        case .home, .stickyNotes, nil:
             break
         }
     }
