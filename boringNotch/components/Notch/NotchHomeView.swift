@@ -78,6 +78,11 @@ struct AlbumArtView: View {
             } label: {
                 ZStack(alignment: .bottomTrailing) {
                     albumArtImage
+                        .albumArtHoverGlow(
+                            musicManager.albumArt,
+                            cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.opened,
+                            radius: 8.8
+                        )
                     appIconOverlay
                 }
             }

@@ -251,6 +251,7 @@ struct CompactHomeView: View {
                     .resizable().scaledToFill()
                     .frame(width: albumArtWidth, height: albumArtWidth)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .albumArtHoverGlow(musicManager.albumArt, cornerRadius: 10, radius: 5.5)
 
                 // Badge scaled to this art. AlbumArtView's is a fixed 30pt with
                 // a +10/+10 offset, sized for the 120pt art in the full layout —
