@@ -36,6 +36,15 @@ struct PlaybackState {
     }
 }
 
+extension PlaybackState {
+    /// Whether this is still the track or video `other` showed: the same app
+    /// and the same title. What was read about it (a favorite or not) carries
+    /// over from one update to the next.
+    func isSameItem(as other: PlaybackState) -> Bool {
+        bundleIdentifier == other.bundleIdentifier && title == other.title
+    }
+}
+
 extension Sequence where Element == String {
     var normalizedBundleIdentifiers: [String] {
         var seen = Set<String>()

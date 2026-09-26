@@ -69,6 +69,7 @@ final class NowPlayingController: NowPlayingRuntimeControlling {
     private let runtimeFailureContinuation: AsyncStream<Void>.Continuation
 
     private var streamSession: NowPlayingStreamSession?
+    private var favoriteRefreshTask: Task<Void, Never>?
 
     // MARK: - Initialization
     init() throws {
@@ -297,11 +298,31 @@ final class NowPlayingController: NowPlayingRuntimeControlling {
 
         newPlaybackState.volume = payload.volume ?? (diff ? self.playbackState.volume : 0.5)
 
+        // Updates don't say whether the track is a favorite: keep what was
+        // read for it, and read it again once another track plays.
+        let isSameItem = newPlaybackState.isSameItem(as: self.playbackState)
+        newPlaybackState.isFavorite = isSameItem && self.playbackState.isFavorite
+
         self.playbackState = newPlaybackState
+        if !isSameItem {
+            refreshFavoriteState()
+        }
+    }
+
+    /// Reads whether the new track is a favorite, once its title has settled.
+    private func refreshFavoriteState() {
+        favoriteRefreshTask?.cancel()
+        guard supportsFavorite else { return }
+        favoriteRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await self?.fetchFavoriteStateIfSupported()
+        }
     }
 
     private func fetchFavoriteStateIfSupported() async {
         guard playbackState.bundleIdentifier == MediaAppBundleID.appleMusic else { return }
+        let item = playbackState
 
         let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: MediaAppBundleID.appleMusic)
         guard !runningApps.isEmpty else { return }
@@ -315,7 +336,8 @@ final class NowPlayingController: NowPlayingRuntimeControlling {
             end try
         end tell
         """
-        if let result = try? await AppleScriptHelper.execute(script) {
+        // The answer only counts for the track it was asked about.
+        if let result = try? await AppleScriptHelper.execute(script), playbackState.isSameItem(as: item) {
             var updated = playbackState
             updated.isFavorite = result.booleanValue
             playbackState = updated

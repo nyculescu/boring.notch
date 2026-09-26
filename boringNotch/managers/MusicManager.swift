@@ -586,6 +586,9 @@ final class MusicManager: ObservableObject {
             self.bundleIdentifier = state.bundleIdentifier
             // Update volume control support from active controller
             self.volumeControlSupported = activeController?.supportsVolumeControl ?? false
+            // The heart is for music it can like (Apple Music), not for videos
+            // or other players, so it follows the app playing too.
+            self.canFavoriteTrack = activeController?.supportsFavorite ?? false
         }
 
         let captureBundleIDs = state.effectiveAudioCaptureBundleIdentifiers
