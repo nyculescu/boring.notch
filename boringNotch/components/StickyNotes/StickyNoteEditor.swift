@@ -66,6 +66,12 @@ struct StickyNoteEditor: NSViewRepresentable {
         textView.usesFontPanel = false
         textView.isAutomaticLinkDetectionEnabled = false
         textView.isAutomaticDataDetectionEnabled = false
+        // Apple Intelligence's Writing Tools button pops up over the text on
+        // every selection, covering the small note. It also leaves the
+        // context menu: AppKit can't hide only the button on a text view.
+        if #available(macOS 15.0, *) {
+            textView.writingToolsBehavior = .none
+        }
         scrollView.documentView = textView
         configure(textView, in: scrollView)
         textView.string = text
