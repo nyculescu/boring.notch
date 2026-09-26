@@ -1,30 +1,31 @@
 //
-//  StickyNoteSwipeTrackerTests.swift
+//  TwoFingerSwipeTrackerTests.swift
 //  boringNotch
 //
 //  Created by Catalin Niculescu on 2026-09-25.
 //
-//  A two-finger swipe steps one note at a time: left to older notes, right
-//  to newer ones, never twice in one swipe, and never for vertical scrolling.
+//  A two-finger swipe steps one page at a time (a sticky note, a player):
+//  left to the next, right back, never twice in one swipe, and never for
+//  vertical scrolling.
 //
 
 import XCTest
 @testable import boringNotch
 
-final class StickyNoteSwipeTrackerTests: XCTestCase {
-    private var tracker = StickyNoteSwipeTracker(threshold: 200)
+final class TwoFingerSwipeTrackerTests: XCTestCase {
+    private var tracker = TwoFingerSwipeTracker(threshold: 200)
 
     /// Feeds a swipe in `count` equal movements and returns every step it produced.
-    private func swipe(dx: CGFloat, dy: CGFloat = 0, in count: Int = 10) -> [StickyNoteSwipeTracker.Step] {
+    private func swipe(dx: CGFloat, dy: CGFloat = 0, in count: Int = 10) -> [TwoFingerSwipeTracker.Step] {
         (0..<count).compactMap { _ in tracker.move(dx: dx / CGFloat(count), dy: dy / CGFloat(count)) }
     }
 
-    func testFingersMovingLeftStepToAnOlderNoteOnce() {
-        XCTAssertEqual(swipe(dx: -600), [.older])
+    func testFingersMovingLeftStepForwardOnce() {
+        XCTAssertEqual(swipe(dx: -600), [.forward])
     }
 
-    func testFingersMovingRightStepToANewerNote() {
-        XCTAssertEqual(swipe(dx: 250), [.newer])
+    func testFingersMovingRightStepBack() {
+        XCTAssertEqual(swipe(dx: 250), [.backward])
     }
 
     func testAShortSwipeDoesNothing() {
@@ -36,7 +37,7 @@ final class StickyNoteSwipeTrackerTests: XCTestCase {
     }
 
     func testASlightlySlantedSwipeStillSteps() {
-        XCTAssertEqual(swipe(dx: -300, dy: 60), [.older])
+        XCTAssertEqual(swipe(dx: -300, dy: 60), [.forward])
     }
 
     func testGoingBackAndForthCancelsOut() {
@@ -45,13 +46,13 @@ final class StickyNoteSwipeTrackerTests: XCTestCase {
     }
 
     func testTheNextSwipeStepsAgain() {
-        XCTAssertEqual(swipe(dx: -300), [.older])
+        XCTAssertEqual(swipe(dx: -300), [.forward])
         tracker.reset()
-        XCTAssertEqual(swipe(dx: -300), [.older])
+        XCTAssertEqual(swipe(dx: -300), [.forward])
     }
 
     func testFollowsTheSensitivitySetting() {
         tracker.threshold = 100
-        XCTAssertEqual(swipe(dx: -120), [.older])
+        XCTAssertEqual(swipe(dx: -120), [.forward])
     }
 }

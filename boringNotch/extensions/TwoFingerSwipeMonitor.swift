@@ -1,5 +1,5 @@
 //
-//  StickyNoteSwipeMonitor.swift
+//  TwoFingerSwipeMonitor.swift
 //  boringNotch
 //
 //  Created by Catalin Niculescu on 2026-09-25.
@@ -10,13 +10,13 @@ import Defaults
 import SwiftUI
 
 /// Watches two-finger swipes over the view it backs and reports a step to
-/// the next older or newer note, once per swipe. It follows the notch's
+/// the next or previous page, once per swipe. It follows the notch's
 /// gesture settings: off with "Enable gestures", as far as "Gesture
 /// sensitivity" asks, and in the fingers' direction when "Normalize gesture
 /// direction" is on, like the media swipes (see PanGesture). Scroll events
-/// pass through untouched, so the note's text still scrolls.
-struct StickyNoteSwipeMonitor: NSViewRepresentable {
-    let onSwipe: (StickyNoteSwipeTracker.Step) -> Void
+/// pass through untouched, so a note's text still scrolls.
+struct TwoFingerSwipeMonitor: NSViewRepresentable {
+    let onSwipe: (TwoFingerSwipeTracker.Step) -> Void
 
     func makeNSView(context: Context) -> MonitorView {
         let view = MonitorView()
@@ -33,11 +33,11 @@ struct StickyNoteSwipeMonitor: NSViewRepresentable {
     }
 
     final class MonitorView: NSView {
-        var onSwipe: ((StickyNoteSwipeTracker.Step) -> Void)?
+        var onSwipe: ((TwoFingerSwipeTracker.Step) -> Void)?
         private var monitor: Any?
-        private var tracker = StickyNoteSwipeTracker(threshold: 200)
+        private var tracker = TwoFingerSwipeTracker(threshold: 200)
 
-        // Never takes a click meant for the note on top of it.
+        // Never takes a click meant for the view on top of it.
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
         override func viewDidMoveToWindow() {

@@ -1,6 +1,6 @@
 #!/bin/zsh
-# Runs the sticky notes unit tests (boringNotchTests/StickyNote*Tests.swift)
-# without launching the app. Upstream's test target is hosted inside Boring
+# Runs the sticky notes unit tests (boringNotchTests/StickyNote*Tests.swift,
+# and the two-finger swipe the notes page with) without launching the app. Upstream's test target is hosted inside Boring
 # Notch, so `xcodebuild test` would start a second copy next to the installed
 # one; here the code under test is compiled with the tests into a small XCTest
 # runner, as tools/test-clipboard.sh does for the clipboard.
@@ -19,10 +19,10 @@ mkdir -p "$work"
 sources=(
     boringNotch/components/StickyNotes/StickyNote.swift
     boringNotch/components/StickyNotes/StickyNotesStore.swift
-    boringNotch/components/StickyNotes/StickyNoteSwipeTracker.swift
+    boringNotch/extensions/TwoFingerSwipeTracker.swift
 )
 classes=()
-for test in boringNotchTests/StickyNote*Tests.swift; do
+for test in boringNotchTests/StickyNote*Tests.swift boringNotchTests/TwoFingerSwipeTrackerTests.swift; do
     sed '/^@testable import boringNotch$/d' "$test" > "$work/${test:t}"
     classes+=("${test:t:r}.self")
 done

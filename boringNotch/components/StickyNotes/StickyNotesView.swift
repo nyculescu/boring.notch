@@ -48,7 +48,7 @@ struct StickyNotesView: View {
         .offset(x: bounceOffset)
         // Keeps a note sliding in or out inside the tab.
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .background(StickyNoteSwipeMonitor { step in move(step == .older ? 1 : -1) })
+        .background(TwoFingerSwipeMonitor { step in move(step == .forward ? 1 : -1) })
         .onAppear { notes.ensureNote() }
         .onChange(of: notes.document.notes.isEmpty) { _, isEmpty in
             if isEmpty {

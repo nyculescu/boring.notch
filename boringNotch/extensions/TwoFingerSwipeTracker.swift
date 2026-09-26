@@ -1,5 +1,5 @@
 //
-//  StickyNoteSwipeTracker.swift
+//  TwoFingerSwipeTracker.swift
 //  boringNotch
 //
 //  Created by Catalin Niculescu on 2026-09-25.
@@ -7,16 +7,18 @@
 
 import CoreGraphics
 
-/// Turns a two-finger swipe across the note into at most one step to a
-/// neighboring note. Only the fingers' travel counts: the caller leaves out
-/// the momentum that follows a flick, so a flick never steps twice, and a
-/// mostly vertical scroll (reading down a long note) never steps at all.
-struct StickyNoteSwipeTracker {
+/// Turns a two-finger swipe into at most one step to a neighboring page: a
+/// sticky note, or a player in the Media tab. Only the fingers' travel
+/// counts: the caller leaves out the momentum that follows a flick, so a
+/// flick never steps twice, and a mostly vertical scroll (reading down a
+/// long note) never steps at all.
+struct TwoFingerSwipeTracker {
     enum Step: Equatable {
-        /// Fingers moving left push the note away, bringing in the next older one.
-        case older
-        /// Fingers moving right bring back the next newer note.
-        case newer
+        /// Fingers moving left push the page away, bringing in the next one
+        /// (the next older note, the next player).
+        case forward
+        /// Fingers moving right bring back the previous page.
+        case backward
     }
 
     /// How far the fingers must travel sideways, in scroll points.
@@ -45,6 +47,6 @@ struct StickyNoteSwipeTracker {
         travelY += dy
         guard !stepped, abs(travelX) >= threshold, abs(travelX) >= 2 * abs(travelY) else { return nil }
         stepped = true
-        return travelX < 0 ? .older : .newer
+        return travelX < 0 ? .forward : .backward
     }
 }
