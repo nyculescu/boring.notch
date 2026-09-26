@@ -30,6 +30,10 @@ struct StickyNoteEditor: NSViewRepresentable {
     /// charcoal: the selection and scroller follow the paper, not the notch.
     var isDark: Bool
     var textContainerInset: NSSize
+    /// Apple Intelligence's Writing Tools, off unless turned on in Settings:
+    /// their button pops up over the text on every selection, covering the
+    /// small note.
+    var allowsWritingTools: Bool
     /// Called on a click in the text, before the click itself is handled:
     /// the moment to take the keyboard.
     var onClick: (NSTextView) -> Void
@@ -66,12 +70,6 @@ struct StickyNoteEditor: NSViewRepresentable {
         textView.usesFontPanel = false
         textView.isAutomaticLinkDetectionEnabled = false
         textView.isAutomaticDataDetectionEnabled = false
-        // Apple Intelligence's Writing Tools button pops up over the text on
-        // every selection, covering the small note. It also leaves the
-        // context menu: AppKit can't hide only the button on a text view.
-        if #available(macOS 15.0, *) {
-            textView.writingToolsBehavior = .none
-        }
         scrollView.documentView = textView
         configure(textView, in: scrollView)
         textView.string = text
@@ -119,6 +117,14 @@ struct StickyNoteEditor: NSViewRepresentable {
         }
         if textView.textContainerInset != textContainerInset {
             textView.textContainerInset = textContainerInset
+        }
+        // Off, they leave the context menu too: AppKit can't hide only the
+        // button on a text view.
+        if #available(macOS 15.0, *) {
+            let writingTools: NSWritingToolsBehavior = allowsWritingTools ? .default : .none
+            if textView.writingToolsBehavior != writingTools {
+                textView.writingToolsBehavior = writingTools
+            }
         }
         textView.onClick = onClick
         textView.onAttach = onAttach

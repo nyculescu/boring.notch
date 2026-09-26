@@ -16,6 +16,7 @@ struct StickyNotesView: View {
     @EnvironmentObject private var vm: BoringViewModel
     @ObservedObject private var notes = StickyNotesManager.shared
     @Default(.compactMode) private var compactMode
+    @Default(.stickyNotesWritingTools) private var allowsWritingTools
     @State private var editor = EditorHandle()
     @State private var showsColors = false
     /// Where the next note comes in from: older notes from the right, newer
@@ -82,6 +83,7 @@ struct StickyNotesView: View {
                     textColor: note.color.inkNSColor,
                     isDark: note.color.isDark,
                     textContainerInset: textInset,
+                    allowsWritingTools: allowsWritingTools,
                     onClick: { textView in
                         showsColors = false
                         NotchKeyboardFocus.shared.take(for: textView, in: textView.window, viewModel: vm, pointerIsOnNotch: true)

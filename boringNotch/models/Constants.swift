@@ -516,6 +516,8 @@ extension Defaults.Keys {
 
     // MARK: Sticky Notes
     static let stickyNotesEnabled = Key<Bool>("stickyNotesEnabled", default: true)
+    // Off by default: Writing Tools' button pops up over the note on every selection.
+    static let stickyNotesWritingTools = Key<Bool>("stickyNotesWritingTools", default: false)
 
     // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)

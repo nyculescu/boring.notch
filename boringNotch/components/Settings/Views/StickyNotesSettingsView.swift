@@ -34,6 +34,18 @@ struct StickyNotesSettingsView: View {
             } footer: {
                 footnote("The Sticky Notes tab shows the note you used last. Click it to type: the notch keeps the keyboard until the pointer leaves it, and Escape closes it. + (or Command-N) starts a note in the same color, the palette changes a note's color, and a two-finger swipe moves between notes, newest first. Notes are saved on this Mac as you type, and stay when you quit, restart or turn this off.")
             }
+
+            if #available(macOS 15.0, *) {
+                Section {
+                    Defaults.Toggle(key: .stickyNotesWritingTools) {
+                        Text("Allow Writing Tools in notes")
+                    }
+                } header: {
+                    Text("Writing Tools")
+                } footer: {
+                    footnote("Apple Intelligence's Writing Tools proofread and rewrite a note. Off, their button no longer pops up over the text you select, and they leave the note's right-click menu too.")
+                }
+            }
         }
         .accentColor(.effectiveAccent)
         .navigationTitle("Sticky Notes")
