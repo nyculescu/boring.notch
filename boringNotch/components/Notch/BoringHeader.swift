@@ -13,10 +13,20 @@ struct BoringHeader: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = BoringViewCoordinator.shared
     @StateObject var shelfState = ShelfStateViewModel.shared
+    @ObservedObject private var clipboard = ClipboardHistoryManager.shared
+    @Default(.clipboardHistoryEnabled) private var clipboardHistoryEnabled
+
+    /// Tabs show when a tab besides Home has something to offer, or always if the user asked.
+    private var showsTabs: Bool {
+        let shelfTab = (!shelfState.isEmpty || coordinator.alwaysShowTabs) && Defaults[.boringShelf]
+        let clipboardTab = (!clipboard.items.isEmpty || coordinator.alwaysShowTabs) && clipboardHistoryEnabled
+        return shelfTab || clipboardTab
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             HStack {
-                if (!shelfState.isEmpty || coordinator.alwaysShowTabs) && Defaults[.boringShelf] {
+                if showsTabs {
                     TabSelectionView()
                 } else if vm.notchState == .open {
                     EmptyView()

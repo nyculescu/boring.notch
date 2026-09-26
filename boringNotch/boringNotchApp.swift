@@ -327,6 +327,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        ClipboardHistoryManager.shared.startObservingPreferences()
+
+        KeyboardShortcuts.onKeyDown(for: .openClipboardHistory) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.toggleClipboardHistory()
+            }
+        }
+
         // Sync notch height with real value on app launch if mode is matchRealNotchSize
         syncNotchHeightIfNeeded()
 
@@ -408,5 +416,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onboardingWindowController?.window?.level = .floating
         onboardingWindowController?.window?.makeKeyAndOrderFront(nil)
         onboardingWindowController?.window?.orderFrontRegardless()
+    }
+}
+
+// MARK: - Clipboard history shortcut
+
+extension AppDelegate {
+    /// Opens the notch under the pointer on the Clipboard tab, or closes it when
+    /// that tab is already showing. Unlike the plain open shortcut, it stays open
+    /// while the pointer is on the notch, so there's time to pick an entry.
+    @MainActor
+    fileprivate func toggleClipboardHistory() {
+        guard Defaults[.clipboardHistoryEnabled] else { return }
+        let viewModel = viewModelUnderPointer()
+        closeNotchTask?.cancel()
+        closeNotchTask = nil
+
+        if viewModel.notchState == .open {
+            if coordinator.currentView == .clipboard {
+                viewModel.close()
+            } else {
+                coordinator.currentView = .clipboard
+            }
+            return
+        }
+
+        coordinator.currentView = .clipboard
+        guard viewModel.open() else { return }
+        closeNotchTask = Task { @MainActor [weak self, weak viewModel] in
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled, let self, let viewModel else { return }
+            // Once the pointer is on the notch, the usual hover handling closes it.
+            if let window = self.notchWindow(for: viewModel), window.frame.contains(NSEvent.mouseLocation) {
+                return
+            }
+            viewModel.close()
+        }
+    }
+
+    @MainActor
+    private func viewModelUnderPointer() -> BoringViewModel {
+        guard Defaults[.showOnAllDisplays] else { return vm }
+        let mouseLocation = NSEvent.mouseLocation
+        for screen in NSScreen.screens where screen.frame.contains(mouseLocation) {
+            if let uuid = screen.displayUUID, let viewModel = viewModels[uuid] {
+                return viewModel
+            }
+        }
+        return vm
+    }
+
+    @MainActor
+    private func notchWindow(for viewModel: BoringViewModel) -> NSWindow? {
+        if let uuid = viewModel.screenUUID, let window = windows[uuid] {
+            return window
+        }
+        return window
     }
 }

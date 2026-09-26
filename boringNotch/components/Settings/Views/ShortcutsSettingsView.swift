@@ -28,6 +28,16 @@ struct ShortcutsSettingsView: View {
                 .foregroundStyle(.secondary)
                 .font(.caption)
             }
+            Section {
+                KeyboardShortcuts.Recorder("Open Clipboard History:", name: .openClipboardHistory)
+            } header: {
+                Text("Clipboard")
+            } footer: {
+                Text("Opens the notch on the Clipboard tab. Turn on clipboard history in the Clipboard settings first.")
+                    .multilineTextAlignment(.trailing)
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
         }
         .accentColor(.effectiveAccent)
         .navigationTitle("Shortcuts")
