@@ -510,7 +510,8 @@ extension Defaults.Keys {
     static let reverseShelfOrdering = Key<Bool>("reverseShelfOrdering", default: false)
 
     // MARK: Clipboard
-    static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: false)
+    // On by default here: the Clipboard tab stands in for the Shelf, drops included.
+    static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: true)
     static let clipboardHistoryLimit = Key<Int>("clipboardHistoryLimit", default: 10)
 
     // MARK: Calendar
