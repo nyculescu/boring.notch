@@ -184,6 +184,46 @@ struct StickyNotesDocument: Equatable, Codable {
         return true
     }
 
+    // MARK: Two notes side by side
+
+    /// The two notes the full-size notch shows: the note showing and the
+    /// next older one, or the two oldest when it's the oldest. Usually
+    /// that's the two notes written in last.
+    var currentPair: [StickyNote] {
+        pair(startingAt: currentIndex ?? 0)
+    }
+
+    /// Two neighboring notes from `index`, moved back when `index` is the
+    /// oldest so there are still two; fewer only when there aren't two notes.
+    func pair(startingAt index: Int) -> [StickyNote] {
+        guard !notes.isEmpty else { return [] }
+        let start = min(max(index, 0), max(notes.count - 2, 0))
+        return Array(notes[start..<min(start + 2, notes.count)])
+    }
+
+    /// The pair one note along from the one on screen: +1 toward older
+    /// notes, -1 toward newer ones, nil at either end. Writing in a note
+    /// moves it first in the order, so the pair on screen may be out of
+    /// order; the step is taken from its older or newer note.
+    func neighborPair(of shown: [UUID], offset: Int) -> [StickyNote]? {
+        let indices = shown.compactMap { id in notes.firstIndex { $0.id == id } }
+        guard offset != 0, let newest = indices.min(), let oldest = indices.max() else { return nil }
+        let start = offset > 0 ? oldest + offset - 1 : newest + offset
+        guard start >= 0, start + 1 < notes.count else { return nil }
+        return [notes[start], notes[start + 1]]
+    }
+
+    /// Whether the pair on screen should give way to `currentPair`: one of
+    /// its notes is gone, the note showing isn't in it (a new note, one
+    /// opened from the notes list), or it has room for another note.
+    /// Writing in a note never counts, so the notes don't swap places
+    /// under the caret.
+    func pairNeedsRefresh(_ shown: [UUID]) -> Bool {
+        if shown.contains(where: { id in !notes.contains { $0.id == id } }) { return true }
+        if let current = currentNote?.id, !shown.contains(current) { return true }
+        return shown.count < min(2, notes.count)
+    }
+
     /// Writing in a note makes it the newest, and the one showing.
     mutating func updateText(_ text: String, of id: UUID, now: Date = Date()) {
         guard let index = notes.firstIndex(where: { $0.id == id }), notes[index].text != text else { return }

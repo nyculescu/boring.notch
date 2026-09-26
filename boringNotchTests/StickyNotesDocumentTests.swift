@@ -131,6 +131,97 @@ final class StickyNotesDocumentTests: XCTestCase {
         XCTAssertEqual(document.currentNote?.text, "new")
     }
 
+    // MARK: - Two notes side by side
+
+    private func texts(_ notes: [StickyNote]) -> [String] {
+        notes.map(\.text)
+    }
+
+    private func ids(_ document: StickyNotesDocument, _ texts: String...) -> [UUID] {
+        texts.compactMap { text in document.notes.first { $0.text == text }?.id }
+    }
+
+    func testThePairIsTheTwoNotesWrittenInLast() {
+        XCTAssertEqual(texts(threeNotes().currentPair), ["new", "mid"])
+    }
+
+    func testThePairKeepsTwoNotesWhenTheOldestShows() {
+        var document = threeNotes()
+        document.selectNeighbor(2)
+        XCTAssertEqual(texts(document.currentPair), ["mid", "old"])
+        XCTAssertEqual(texts(document.pair(startingAt: 99)), ["mid", "old"])
+        XCTAssertEqual(texts(document.pair(startingAt: -1)), ["new", "mid"])
+    }
+
+    func testASingleNoteMakesAPairOfOne() {
+        let document = StickyNotesDocument(notes: [note("only", minutesAgo: 1)])
+        XCTAssertEqual(texts(document.currentPair), ["only"])
+        XCTAssertEqual(StickyNotesDocument().currentPair, [])
+    }
+
+    func testSwipingMovesThePairOneNoteAlongAndStopsAtEitherEnd() {
+        let document = threeNotes()
+        let first = ids(document, "new", "mid")
+        XCTAssertNil(document.neighborPair(of: first, offset: -1))
+        let older = document.neighborPair(of: first, offset: 1)
+        XCTAssertEqual(older.map(texts), ["mid", "old"])
+        XCTAssertNil(document.neighborPair(of: ids(document, "mid", "old"), offset: 1))
+        XCTAssertEqual(document.neighborPair(of: ids(document, "mid", "old"), offset: -1).map(texts), ["new", "mid"])
+    }
+
+    func testSwipingAfterWritingInTheRightNoteGoesByItsOlderNote() {
+        var document = threeNotes()
+        let shown = ids(document, "new", "mid")
+        // Writing in "mid" makes it the newest: the order is now mid, new, old.
+        document.updateText("mid!", of: shown[1], now: start)
+        XCTAssertEqual(document.neighborPair(of: shown, offset: 1).map(texts), ["new", "old"])
+        XCTAssertNil(document.neighborPair(of: shown, offset: -1))
+    }
+
+    func testWritingInEitherNoteKeepsThePairOnScreen() {
+        var document = threeNotes()
+        let shown = ids(document, "new", "mid")
+        document.updateText("mid!", of: shown[1], now: start)
+        XCTAssertFalse(document.pairNeedsRefresh(shown))
+        document.updateText("new!", of: shown[0], now: start.addingTimeInterval(1))
+        XCTAssertFalse(document.pairNeedsRefresh(shown))
+    }
+
+    func testANewNoteJoinsThePairOnTheLeft() {
+        var document = threeNotes()
+        let shown = ids(document, "new", "mid")
+        document.createNote(now: start.addingTimeInterval(60))
+        XCTAssertTrue(document.pairNeedsRefresh(shown))
+        XCTAssertEqual(texts(document.currentPair), ["", "new"])
+    }
+
+    func testOpeningAnotherNoteFromTheListShowsIt() {
+        var document = threeNotes()
+        let shown = ids(document, "new", "mid")
+        document.select(ids(document, "mid")[0])
+        XCTAssertFalse(document.pairNeedsRefresh(shown), "Already on screen")
+        document.select(ids(document, "old")[0])
+        XCTAssertTrue(document.pairNeedsRefresh(shown))
+        XCTAssertEqual(texts(document.currentPair), ["mid", "old"])
+    }
+
+    func testDeletingANoteOnScreenRefillsThePair() {
+        var document = threeNotes()
+        let shown = ids(document, "new", "mid")
+        document.delete(shown[1])
+        XCTAssertTrue(document.pairNeedsRefresh(shown))
+        XCTAssertEqual(texts(document.currentPair), ["new", "old"])
+    }
+
+    func testAPairOfOneGrowsWhenASecondNoteArrives() {
+        var document = StickyNotesDocument(notes: [note("only", minutesAgo: 1)])
+        let shown = document.currentPair.map(\.id)
+        XCTAssertFalse(document.pairNeedsRefresh(shown))
+        document.restore([note("back", minutesAgo: 5)])
+        XCTAssertTrue(document.pairNeedsRefresh(shown))
+        XCTAssertEqual(texts(document.currentPair), ["only", "back"])
+    }
+
     func testLeavingABlankNoteDropsIt() {
         var document = threeNotes()
         document.createNote(now: start)

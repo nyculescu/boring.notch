@@ -9,24 +9,54 @@ import AppKit
 import Defaults
 import SwiftUI
 
-/// The Sticky Notes tab: the note you used last, filling the tab, written in
-/// place. A band along its top holds + for a new note, the page dots, the
+/// The Sticky Notes tab: the notes you used last, written in place. The
+/// full-size notch shows two side by side, compact mode one filling the tab.
+/// A band along each note's top holds + for a new note, the page dots, the
 /// color swatches and the notes list; a two-finger swipe moves between notes.
 struct StickyNotesView: View {
     @EnvironmentObject private var vm: BoringViewModel
     @ObservedObject private var notes = StickyNotesManager.shared
     @Default(.compactMode) private var compactMode
     @Default(.stickyNotesWritingTools) private var allowsWritingTools
-    @State private var editor = EditorHandle()
-    @State private var showsColors = false
+    @State private var editors = EditorHandles()
+    /// The note whose band shows the color swatches.
+    @State private var colorsNoteID: UUID?
+    /// The two notes on screen in the full-size notch. They stay put while
+    /// you write, though writing makes a note the newest; the next time the
+    /// tab shows, the two written in last are side by side again.
+    @State private var pairIDs: [UUID] = []
     /// Where the next note comes in from: older notes from the right, newer
     /// ones from the left, as if the notes lay side by side, newest first.
     @State private var incomingEdge: Edge = .trailing
     @State private var bounceOffset: CGFloat = 0
 
-    /// The text view on screen, so a request for the keyboard can reach it.
-    private final class EditorHandle {
-        weak var textView: NSTextView?
+    /// The text views on screen, by note, so a request for the keyboard can
+    /// reach the right one.
+    @MainActor
+    private final class EditorHandles {
+        private let textViews = NSMapTable<NSUUID, NSTextView>.strongToWeakObjects()
+
+        subscript(id: UUID?) -> NSTextView? {
+            guard let id, let textView = textViews.object(forKey: id as NSUUID), textView.window != nil else { return nil }
+            return textView
+        }
+
+        func register(_ textView: NSTextView, for id: UUID) {
+            textViews.setObject(textView, forKey: id as NSUUID)
+        }
+    }
+
+    /// Which of the band's controls a note shows. Side by side, the notes
+    /// share them out: + and the page dots on the left, the notes list on
+    /// the right, and each its own colors.
+    private struct BandControls {
+        var newNote = true
+        var pages = true
+        var list = true
+
+        static let all = BandControls()
+        static let leading = BandControls(list: false)
+        static let trailing = BandControls(newNote: false, pages: false)
     }
 
     /// Up to this many notes show as dots; beyond it, as "3 / 12".
@@ -36,12 +66,23 @@ struct StickyNotesView: View {
     private var fontSize: CGFloat { compactMode ? 12 : 13 }
     private var textInset: NSSize { compactMode ? NSSize(width: 4, height: 3) : NSSize(width: 8, height: 6) }
     private var cornerRadius: CGFloat { compactMode ? 8 : 10 }
+    private let cardSpacing: CGFloat = 8
+
+    /// The notes on screen, newest-shown first.
+    private var shownNotes: [StickyNote] {
+        guard !compactMode else { return notes.currentNote.map { [$0] } ?? [] }
+        let pair = pairIDs.compactMap { id in notes.document.notes.first { $0.id == id } }
+        return pair.isEmpty ? notes.document.currentPair : pair
+    }
 
     var body: some View {
-        ZStack {
-            if let note = notes.currentNote {
-                noteCard(note)
-                    .id(note.id)
+        let shown = shownNotes
+        // Compact mode's single note slides over the one leaving; side by
+        // side, the note that stays slides across to make room.
+        let layout = compactMode ? AnyLayout(ZStackLayout()) : AnyLayout(HStackLayout(spacing: cardSpacing))
+        layout {
+            ForEach(Array(shown.enumerated()), id: \.element.id) { position, note in
+                noteCard(note, controls: controls(at: position, of: shown.count))
                     .transition(.push(from: incomingEdge))
             }
         }
@@ -50,30 +91,45 @@ struct StickyNotesView: View {
         // Keeps a note sliding in or out inside the tab.
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .background(TwoFingerSwipeMonitor { step in move(step == .forward ? 1 : -1) })
-        .onAppear { notes.ensureNote() }
-        .onChange(of: notes.document.notes.isEmpty) { _, isEmpty in
-            if isEmpty {
+        .onAppear {
+            notes.ensureNote()
+            pairIDs = notes.document.currentPair.map(\.id)
+        }
+        .onChange(of: notes.document) { _, document in
+            if document.notes.isEmpty {
                 notes.ensureNote()
+            } else if !compactMode, document.pairNeedsRefresh(pairIDs) {
+                withAnimation(.smooth(duration: 0.3)) {
+                    pairIDs = document.currentPair.map(\.id)
+                }
             }
         }
+        .onChange(of: compactMode) { _, _ in
+            pairIDs = notes.document.currentPair.map(\.id)
+        }
         .onChange(of: notes.focusRequest?.id) { _, id in
-            if id != nil, let textView = editor.textView, textView.window != nil {
+            if id != nil, let textView = editors[notes.currentNote?.id] {
                 takeRequestedFocus(in: textView)
             }
         }
         .onDisappear {
-            showsColors = false
+            colorsNoteID = nil
             // Typing goes back to the app in front; the notch still closes
             // when the pointer leaves it (see NotchKeyboardFocus).
             NotchKeyboardFocus.shared.giveBack()
         }
     }
 
+    private func controls(at position: Int, of count: Int) -> BandControls {
+        guard count > 1 else { return .all }
+        return position == 0 ? .leading : .trailing
+    }
+
     // MARK: - Note
 
-    private func noteCard(_ note: StickyNote) -> some View {
+    private func noteCard(_ note: StickyNote, controls: BandControls) -> some View {
         VStack(spacing: 0) {
-            band(for: note)
+            band(for: note, controls: controls)
                 .frame(height: bandHeight)
                 .background(note.color.bandColor)
             ZStack(alignment: .topLeading) {
@@ -85,10 +141,10 @@ struct StickyNotesView: View {
                     textContainerInset: textInset,
                     allowsWritingTools: allowsWritingTools,
                     onClick: { textView in
-                        showsColors = false
+                        colorsNoteID = nil
                         NotchKeyboardFocus.shared.take(for: textView, in: textView.window, viewModel: vm, pointerIsOnNotch: true)
                     },
-                    onAttach: { textView in editorAttached(textView) },
+                    onAttach: { textView in editorAttached(textView, for: note.id) },
                     onEscape: { NotchKeyboardFocus.shared.closeNotch() },
                     onNewNote: { newNote(pointerIsOnNotch: false) }
                 )
@@ -110,16 +166,18 @@ struct StickyNotesView: View {
         .accessibilityAction(named: "Previous Note") { move(-1) }
     }
 
-    private func band(for note: StickyNote) -> some View {
+    private func band(for note: StickyNote, controls: BandControls) -> some View {
         HStack(spacing: 0) {
-            NoteBandButton(icon: "plus", label: "New Note", size: bandHeight, ink: note.color.inkColor) {
-                newNote(pointerIsOnNotch: true)
+            if controls.newNote {
+                NoteBandButton(icon: "plus", label: "New Note", size: bandHeight, ink: note.color.inkColor) {
+                    newNote(pointerIsOnNotch: true)
+                }
             }
             Spacer(minLength: 4)
-            if showsColors {
+            if colorsNoteID == note.id {
                 swatches(for: note)
                     .transition(.opacity)
-            } else {
+            } else if controls.pages {
                 pageIndicator(ink: note.color.inkColor)
                     .transition(.opacity)
             }
@@ -129,13 +187,17 @@ struct StickyNotesView: View {
                 label: "Note Color",
                 size: bandHeight,
                 ink: note.color.inkColor,
-                isSelected: showsColors
+                isSelected: colorsNoteID == note.id
             ) {
-                withAnimation(.smooth(duration: 0.2)) { showsColors.toggle() }
+                withAnimation(.smooth(duration: 0.2)) {
+                    colorsNoteID = colorsNoteID == note.id ? nil : note.id
+                }
             }
-            NoteBandButton(icon: "list.bullet", label: "Notes List", size: bandHeight, ink: note.color.inkColor) {
-                showsColors = false
-                StickyNotesListWindowController.shared.show()
+            if controls.list {
+                NoteBandButton(icon: "list.bullet", label: "Notes List", size: bandHeight, ink: note.color.inkColor) {
+                    colorsNoteID = nil
+                    StickyNotesListWindowController.shared.show()
+                }
             }
         }
         .padding(.horizontal, compactMode ? 2 : 4)
@@ -147,7 +209,7 @@ struct StickyNotesView: View {
             ForEach(StickyNoteColor.allCases, id: \.self) { color in
                 Button {
                     notes.setColor(color, of: note.id)
-                    withAnimation(.smooth(duration: 0.2)) { showsColors = false }
+                    withAnimation(.smooth(duration: 0.2)) { colorsNoteID = nil }
                 } label: {
                     Circle()
                         .fill(color.bandColor)
@@ -170,22 +232,30 @@ struct StickyNotesView: View {
         }
     }
 
+    /// One dot per note, lit for the notes on screen.
     @ViewBuilder
     private func pageIndicator(ink: Color) -> some View {
-        let count = notes.document.notes.count
-        let index = notes.document.currentIndex ?? 0
-        if count > maxDots {
-            Text("\(index + 1) / \(count)")
+        let all = notes.document.notes
+        let count = all.count
+        let shown = shownNotes.compactMap { note in all.firstIndex { $0.id == note.id } }.sorted()
+        if count > maxDots, let first = shown.first, let last = shown.last {
+            Group {
+                if first == last {
+                    Text("\(first + 1) / \(count)")
+                } else {
+                    Text("\(first + 1)–\(last + 1) / \(count)")
+                }
+            }
                 .font(.system(size: compactMode ? 9 : 10, weight: .medium).monospacedDigit())
                 .foregroundStyle(ink.opacity(0.55))
-        } else if count > 1 {
+        } else if count > shown.count, let first = shown.first, let last = shown.last {
             HStack(spacing: 0) {
                 ForEach(0..<count, id: \.self) { dot in
                     Button {
-                        move(dot - index)
+                        jump(to: dot)
                     } label: {
                         Circle()
-                            .fill(ink.opacity(dot == index ? 0.65 : 0.22))
+                            .fill(ink.opacity(shown.contains(dot) ? 0.65 : 0.22))
                             .frame(width: 5, height: 5)
                             .frame(width: 10, height: bandHeight)
                             .contentShape(Rectangle())
@@ -194,7 +264,9 @@ struct StickyNotesView: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("Note \(index + 1) of \(count)"))
+            .accessibilityLabel(first == last
+                ? Text("Note \(first + 1) of \(count)")
+                : Text("Notes \(first + 1) to \(last + 1) of \(count)"))
         }
     }
 
@@ -209,25 +281,67 @@ struct StickyNotesView: View {
     // MARK: - Moving between notes
 
     /// Moves `offset` notes along: positive toward older notes. At either
-    /// end the note gives a small nudge instead.
+    /// end the notes give a small nudge instead.
     private func move(_ offset: Int) {
         guard offset != 0 else { return }
-        showsColors = false
-        // The edge is set first and the note changes on the next turn, so
+        colorsNoteID = nil
+        // The edge is set first and the notes change on the next turn, so
         // the note leaving slides out on the same side the new one comes from.
         incomingEdge = offset > 0 ? .trailing : .leading
+        if compactMode {
+            DispatchQueue.main.async {
+                let moved = withAnimation(.smooth(duration: 0.3)) {
+                    notes.selectNeighbor(offset)
+                }
+                if !moved {
+                    nudge(toward: offset)
+                }
+            }
+        } else if let pair = notes.document.neighborPair(of: shownNotes.map(\.id), offset: offset) {
+            DispatchQueue.main.async { show(pair) }
+        } else {
+            nudge(toward: offset)
+        }
+    }
+
+    /// A page dot: that note, with the next older one beside it in the full-size notch.
+    private func jump(to index: Int) {
+        guard let first = shownNotes.first.flatMap({ note in notes.document.notes.firstIndex { $0.id == note.id } }),
+              index != first
+        else {
+            return
+        }
+        if compactMode {
+            move(index - first)
+            return
+        }
+        colorsNoteID = nil
+        incomingEdge = index > first ? .trailing : .leading
+        let pair = notes.document.pair(startingAt: index)
+        DispatchQueue.main.async { show(pair) }
+    }
+
+    /// Puts `pair` on screen, the newer of the two as the note showing. If
+    /// the notch has the keyboard, it goes to that note.
+    private func show(_ pair: [StickyNote]) {
+        guard let newest = pair.first else { return }
+        withAnimation(.smooth(duration: 0.3)) {
+            pairIDs = pair.map(\.id)
+            notes.select(newest.id)
+        }
         DispatchQueue.main.async {
-            let moved = withAnimation(.smooth(duration: 0.3)) {
-                notes.selectNeighbor(offset)
+            guard let textView = editors[newest.id],
+                  NotchKeyboardFocus.shared.hasKeyboard(in: textView.window),
+                  textView.window?.firstResponder !== textView
+            else {
+                return
             }
-            if !moved {
-                nudge(toward: offset)
-            }
+            takeKeyboard(in: textView, pointerIsOnNotch: false)
         }
     }
 
     private func newNote(pointerIsOnNotch: Bool) {
-        showsColors = false
+        colorsNoteID = nil
         // The new note is the newest, so it comes in from the left.
         incomingEdge = .leading
         DispatchQueue.main.async {
@@ -251,13 +365,14 @@ struct StickyNotesView: View {
 
     // MARK: - Keyboard
 
-    /// A note that appears while the notch has the keyboard (a new note, or
-    /// one swiped to while typing) takes it over, caret at the end; so does
-    /// one asked to (+ or the notes list).
-    private func editorAttached(_ textView: NSTextView) {
-        editor.textView = textView
+    /// The note showing, when it appears while the notch has the keyboard
+    /// (a new note, or one swiped to while typing), takes it over, caret at
+    /// the end; so does one asked to (+ or the notes list). The note beside
+    /// it waits for a click.
+    private func editorAttached(_ textView: NSTextView, for id: UUID) {
+        editors.register(textView, for: id)
         DispatchQueue.main.async {
-            guard editor.textView === textView, textView.window != nil else { return }
+            guard editors[id] === textView, notes.currentNote?.id == id else { return }
             if notes.focusRequest != nil {
                 takeRequestedFocus(in: textView)
             } else if NotchKeyboardFocus.shared.hasKeyboard(in: textView.window) {
