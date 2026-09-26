@@ -39,7 +39,11 @@ version="$base_version+$suffix"
 
 # Build number: the build upstream shipped for that tag plus the commits since it
 # (e.g. 282.4), so the updater only offers official builds that are really newer.
-tag_build=$(git show origin/main:updater/appcast.xml 2>/dev/null | python3 -c '
+upstream_remote=origin
+if git remote get-url upstream >/dev/null 2>&1; then
+    upstream_remote=upstream
+fi
+tag_build=$(git show "$upstream_remote/main:updater/appcast.xml" 2>/dev/null | python3 -c '
 import re, sys
 want = sys.argv[1]
 for item in re.findall(r"<item>(.*?)</item>", sys.stdin.read(), re.S):

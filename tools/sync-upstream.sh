@@ -2,11 +2,27 @@
 # Rebases the current personal branch onto upstream's dev branch, which is
 # where Boring Notch cuts its release candidates. Your own commits stay on top.
 #
-# Usage: tools/sync-upstream.sh [remote] [branch]    (defaults: origin dev)
+# Usage: tools/sync-upstream.sh [--push] [remote] [branch]
+#   --push   then force-push (with lease) the rebased branch to its remote, i.e. your fork
+#   remote   defaults to "upstream" when that remote exists, otherwise "origin"
+#   branch   defaults to "dev"
 set -euo pipefail
 
-remote=${1:-origin}
-upstream_branch=${2:-dev}
+push=false
+positional=()
+for arg in "$@"; do
+    case "$arg" in
+        --push) push=true ;;
+        -*) echo "Unknown option: $arg" >&2; exit 2 ;;
+        *) positional+=("$arg") ;;
+    esac
+done
+default_remote=origin
+if git remote get-url upstream >/dev/null 2>&1; then
+    default_remote=upstream
+fi
+remote=${positional[1]:-$default_remote}
+upstream_branch=${positional[2]:-dev}
 upstream="$remote/$upstream_branch"
 
 cd "$(git rev-parse --show-toplevel)"
@@ -46,4 +62,16 @@ fi
 echo "Done: $branch has $(git rev-list --count "$upstream..HEAD") commit(s) on top of $upstream."
 if [[ "$new_tag" != "$old_tag" ]]; then
     echo "New upstream release tag: $new_tag (previously $old_tag). Rebuild with tools/build-rc.sh --install."
+fi
+
+# The rebase rewrote your commits, so the copy on your fork needs a force-push;
+# --force-with-lease refuses if the fork has commits this checkout hasn't seen.
+# Never push toward the upstream remote itself.
+push_remote=$(git config "branch.$branch.remote" || true)
+if [[ -n "$push_remote" && "$push_remote" != "$remote" ]]; then
+    if $push; then
+        git push --force-with-lease
+    else
+        echo "Update your fork with: git push --force-with-lease (or rerun with --push)."
+    fi
 fi
