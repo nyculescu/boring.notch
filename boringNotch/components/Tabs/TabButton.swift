@@ -29,6 +29,9 @@ struct TabButton: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
+        // The pill shows only the icon, so name the tab on hover and to VoiceOver.
+        .help(LocalizedStringKey(label))
+        .accessibilityLabel(Text(LocalizedStringKey(label)))
     }
 }
 
