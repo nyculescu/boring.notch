@@ -38,7 +38,7 @@ struct ClipboardSettingsView: View {
             } header: {
                 Text("General")
             } footer: {
-                footnote("History is kept in memory only and is cleared when Boring Notch quits. Text and files are recorded; items that password managers mark as confidential never are.")
+                footnote("Text, images (screenshots included) and files are recorded; items that password managers mark as confidential never are. History is saved on this Mac, outside backups, and stays when you quit, restart or turn it off. Clear History deletes it.")
             }
 
             Section {

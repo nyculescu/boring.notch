@@ -154,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Flush debounced shelf persistence to avoid losing recent changes
         ShelfStateViewModel.shared.flushSync()
+        ClipboardHistoryManager.shared.flushSync()
 
         NotificationCenter.default.removeObserver(self)
         if let observer = screenLockedObserver {

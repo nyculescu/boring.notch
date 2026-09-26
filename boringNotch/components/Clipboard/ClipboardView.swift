@@ -21,12 +21,16 @@ struct ClipboardView: View {
             if clipboard.isAccessDenied {
                 message(icon: "hand.raised", text: "Boring Notch isn't allowed to read the clipboard", showsSettingsButton: true)
             } else if clipboard.items.isEmpty {
-                message(icon: "doc.on.clipboard", text: "Copied text and files will appear here", showsSettingsButton: false)
+                message(icon: "doc.on.clipboard", text: "Copied text, images and files will appear here", showsSettingsButton: false)
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(clipboard.items) { item in
-                            ClipboardItemCell(item: item, isCopied: item.id == copiedItemID)
+                            ClipboardItemCell(
+                                item: item,
+                                thumbnail: item.image.flatMap { clipboard.thumbnail(for: $0) },
+                                isCopied: item.id == copiedItemID
+                            )
                                 .onTapGesture { copy(item) }
                                 .contextMenu { contextMenu(for: item) }
                         }
@@ -86,6 +90,7 @@ struct ClipboardView: View {
 
 private struct ClipboardItemCell: View {
     let item: ClipboardItem
+    let thumbnail: NSImage?
     let isCopied: Bool
     @State private var isHovering = false
 
@@ -141,6 +146,21 @@ private struct ClipboardItemCell: View {
                         .frame(width: 20, height: 20)
                 }
                 previewLabel
+            }
+        case .image:
+            if let thumbnail {
+                // Fill the preview area, cropping instead of letterboxing.
+                Color.clear
+                    .overlay {
+                        Image(nsImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            } else {
+                Label(item.previewText, systemImage: "photo")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white)
             }
         }
     }

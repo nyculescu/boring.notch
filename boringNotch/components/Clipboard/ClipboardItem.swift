@@ -7,12 +7,12 @@
 
 import Foundation
 
-/// One entry in the clipboard history. Only what's needed to preview the entry
-/// and put it back on the pasteboard is kept, and only in memory.
-struct ClipboardItem: Identifiable, Equatable {
-    enum Content: Equatable {
+/// One entry in the clipboard history, as kept in memory and saved to disk.
+struct ClipboardItem: Identifiable, Equatable, Codable {
+    enum Content: Equatable, Codable {
         case text(String)
         case files([URL])
+        case image(ClipboardImage)
     }
 
     let id: UUID
@@ -28,6 +28,13 @@ struct ClipboardItem: Identifiable, Equatable {
         self.sourceBundleIdentifier = sourceBundleIdentifier
     }
 
+    var image: ClipboardImage? {
+        if case .image(let image) = content {
+            return image
+        }
+        return nil
+    }
+
     /// Single-line preview: whitespace runs collapsed, capped so huge copies stay cheap to render.
     var previewText: String {
         switch content {
@@ -39,6 +46,23 @@ struct ClipboardItem: Identifiable, Equatable {
             let names = urls.map(\.lastPathComponent)
             guard let first = names.first else { return "" }
             return names.count > 1 ? "\(first) +\(names.count - 1)" : first
+        case .image(let image):
+            return "Image \(image.pixelWidth)×\(image.pixelHeight)"
         }
+    }
+}
+
+/// A copied image. The pixels live in files named after `hash` (see
+/// `ClipboardHistoryStore`), so identical copies share one file.
+struct ClipboardImage: Codable {
+    /// SHA-256 of the PNG data, as lowercase hex.
+    let hash: String
+    let pixelWidth: Int
+    let pixelHeight: Int
+}
+
+extension ClipboardImage: Equatable {
+    static func == (lhs: ClipboardImage, rhs: ClipboardImage) -> Bool {
+        lhs.hash == rhs.hash
     }
 }
