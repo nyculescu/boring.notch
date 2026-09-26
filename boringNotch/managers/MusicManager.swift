@@ -796,12 +796,31 @@ final class MusicManager: ObservableObject {
             }
         }
     }
-    func openMusicApp() {
-        guard let bundleID = bundleIdentifier else {
-            Log.music.error("Error: appBundleIdentifier is nil")
-            return
-        }
+    /// The app the album art opens: the one playing, or else Apple Music, the
+    /// same fallback its badge shows before anything has played.
+    var playerBundleIdentifier: String {
+        bundleIdentifier ?? MediaAppBundleID.appleMusic
+    }
 
+    private var playerAppNames: [String: String] = [:]
+
+    /// Display name of the player app, for the album art's "Open …" hint.
+    var playerAppName: String? {
+        let bundleID = playerBundleIdentifier
+        if let cached = playerAppNames[bundleID] {
+            return cached
+        }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID),
+              let name = try? url.resourceValues(forKeys: [.localizedNameKey]).localizedName
+        else {
+            return nil
+        }
+        playerAppNames[bundleID] = name
+        return name
+    }
+
+    func openMusicApp() {
+        let bundleID = playerBundleIdentifier
         let workspace = NSWorkspace.shared
         if let appURL = workspace.urlForApplication(withBundleIdentifier: bundleID) {
             let configuration = NSWorkspace.OpenConfiguration()

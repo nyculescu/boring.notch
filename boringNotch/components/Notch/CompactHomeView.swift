@@ -239,24 +239,31 @@ struct CompactHomeView: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
+    /// Opens the player, like the album art in the standard layout.
     private var compactAlbumArt: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Image(nsImage: musicManager.albumArt)
-                .resizable().scaledToFill()
-                .frame(width: albumArtWidth, height: albumArtWidth)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+        Button {
+            musicManager.openMusicApp()
+        } label: {
+            ZStack(alignment: .bottomTrailing) {
+                Image(nsImage: musicManager.albumArt)
+                    .resizable().scaledToFill()
+                    .frame(width: albumArtWidth, height: albumArtWidth)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
-            // Badge scaled to this art. AlbumArtView's is a fixed 30pt with
-            // a +10/+10 offset, sized for the 120pt art in the full layout —
-            // on art this small it spills outside the corner.
-            if !musicManager.usingAppIconForArtwork {
-                appIcon(for: musicManager.bundleIdentifier ?? MediaAppBundleID.appleMusic)
-                    .resizable().scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .offset(x: 5, y: 5)
+                // Badge scaled to this art. AlbumArtView's is a fixed 30pt with
+                // a +10/+10 offset, sized for the 120pt art in the full layout —
+                // on art this small it spills outside the corner.
+                if !musicManager.usingAppIconForArtwork {
+                    appIcon(for: musicManager.bundleIdentifier ?? MediaAppBundleID.appleMusic)
+                        .resizable().scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .offset(x: 5, y: 5)
+                }
             }
+            .frame(width: albumArtWidth, height: albumArtWidth)
         }
-        .frame(width: albumArtWidth, height: albumArtWidth)
+        .buttonStyle(PlainButtonStyle())
+        .help(musicManager.openPlayerHint)
     }
 }
 

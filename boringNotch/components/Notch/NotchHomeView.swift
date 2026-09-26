@@ -34,6 +34,16 @@ struct MusicPlayerView: View {
     }
 }
 
+extension MusicManager {
+    /// Hover hint for the album art, which opens the player in both layouts.
+    var openPlayerHint: LocalizedStringKey {
+        if let name = playerAppName {
+            return "Open \(name)"
+        }
+        return "Open the music player"
+    }
+}
+
 struct AlbumArtView: View {
     @ObservedObject var musicManager = MusicManager.shared
     @ObservedObject var vm: BoringViewModel
@@ -72,6 +82,7 @@ struct AlbumArtView: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .help(musicManager.openPlayerHint)
             .scaleEffect(musicManager.isPlaying ? 1 : 0.85)
 
             albumArtDarkOverlay
