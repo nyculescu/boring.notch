@@ -119,14 +119,30 @@ fi
 
 if $install; then
     dest="/Applications/Boring Notch.app"
-    if pgrep -x "Boring Notch" >/dev/null; then
-        pkill -x "Boring Notch" || true
-        for _ in {1..20}; do pgrep -x "Boring Notch" >/dev/null || break; sleep 0.5; done
+    uid=$(id -u)
+    is_running() { pgrep -u "$uid" -x "Boring Notch" >/dev/null; }
+    wait_while_running() { for _ in {1..$1}; do is_running || return 0; sleep 0.5; done; }
+
+    # Only this account's copy is stopped; another logged-in account keeps its
+    # instance until it relaunches. Boring Notch ignores SIGTERM (AppKit defers
+    # it for apps that can't be suddenly terminated), so escalate to SIGKILL.
+    # Nothing is lost: the shelf saves a second after each change and
+    # clipboard history is memory-only by design.
+    if is_running; then
+        pkill -TERM -u "$uid" -x "Boring Notch" || true
+        wait_while_running 6
+        is_running && pkill -KILL -u "$uid" -x "Boring Notch" || true
+        wait_while_running 10
+        if is_running; then
+            echo "Boring Notch is still running; quit it and run the install again." >&2
+            exit 1
+        fi
     fi
     if [[ -e "$dest" ]]; then
         # Earlier local builds are simply replaced; anything else (an official
         # build) goes to the Trash so it can be restored.
-        if codesign -dv "$dest" 2>&1 | grep -q "Signature=adhoc"; then
+        signature=$(codesign -dv "$dest" 2>&1 || true)
+        if [[ "$signature" == *"Signature=adhoc"* ]]; then
             rm -rf "$dest"
         else
             trash "$dest"
@@ -135,5 +151,10 @@ if $install; then
     ditto "$result" "$dest"
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$dest"
     open "$dest"
+    for _ in {1..20}; do is_running && break; sleep 0.5; done
+    if ! is_running; then
+        echo "Installed $dest, but it didn't start; see ~/Library/Logs/DiagnosticReports." >&2
+        exit 1
+    fi
     echo "Installed and launched: $dest"
 fi
