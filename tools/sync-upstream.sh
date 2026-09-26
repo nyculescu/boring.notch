@@ -39,7 +39,8 @@ fi
 old_base=$(git merge-base HEAD "$upstream")
 old_tag=$(git describe --tags --abbrev=0 --match 'v*' "$old_base" 2>/dev/null || echo "none")
 
-git fetch --tags --prune "$remote"
+# --force: upstream re-points its "nightly" tag on every nightly build.
+git fetch --tags --force --prune "$remote"
 # Keep the local mirror of the upstream branch current too (fast-forward only).
 git fetch --quiet "$remote" "$upstream_branch:$upstream_branch" 2>/dev/null || true
 
