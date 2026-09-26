@@ -325,6 +325,7 @@
 		11DAAB463061BE1600E15887 /* LiveActivities */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = LiveActivities; sourceTree = "<group>"; };
 		C11B0A2D2F6E4A1B00C1AB01 /* Clipboard */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Clipboard; sourceTree = "<group>"; };
 		C11B0A2D2F6E4A1B00C1AB02 /* StickyNotes */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = StickyNotes; sourceTree = "<group>"; };
+		271490A3504DE431C69E244E /* MediaPlayers */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = MediaPlayers; sourceTree = "<group>"; };
 		11DAAB583061BE3000E15887 /* extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = extensions; sourceTree = "<group>"; };
 		11F748502EC9AABA00F841DB /* BoringNotchXPCHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11F7485C2EC9AABA00F841DB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = BoringNotchXPCHelper; sourceTree = "<group>"; };
 		8137A8BA990F4D9CBA56CC7A /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
@@ -563,6 +564,7 @@
 				9A987A042C73CA66005CA465 /* Shelf */,
 				C11B0A2D2F6E4A1B00C1AB01 /* Clipboard */,
 				C11B0A2D2F6E4A1B00C1AB02 /* StickyNotes */,
+				271490A3504DE431C69E244E /* MediaPlayers */,
 				149E0B982C737D26006418B1 /* Webcam */,
 				11DAAB463061BE1600E15887 /* LiveActivities */,
 				11DAAB303061BDED00E15887 /* Settings */,
@@ -821,6 +823,7 @@
 				14CEF40E2C5CAED300855D72 /* Sources */,
 				14CEF40F2C5CAED300855D72 /* Frameworks */,
 				14CEF4102C5CAED300855D72 /* Resources */,
+				9CADA4084273C90904591242 /* Build Now Playing players helper */,
 				B1ECFA062C6FE58A002ACD87 /* Embed Frameworks */,
 				11F748412EC8051E00F841DB /* Embed XPC Services */,
 			);
@@ -837,6 +840,7 @@
 				11DAAB583061BE3000E15887 /* extensions */,
 				C11B0A2D2F6E4A1B00C1AB01 /* Clipboard */,
 				C11B0A2D2F6E4A1B00C1AB02 /* StickyNotes */,
+				271490A3504DE431C69E244E /* MediaPlayers */,
 				8137A8BA990F4D9CBA56CC7A /* Shared */,
 			);
 			name = boringNotch;
@@ -966,6 +970,31 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		9CADA4084273C90904591242 /* Build Now Playing players helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/nowplaying-players/NowPlayingPlayers.m",
+				"$(SRCROOT)/nowplaying-players/nowplaying-players.pl",
+			);
+			name = "Build Now Playing players helper";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/NowPlayingPlayers.dylib",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/nowplaying-players.pl",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Builds the Now Playing players helper (nowplaying-players/) into the app's\n# Resources: the library /usr/bin/perl loads to list every app registered with\n# Now Playing (see NowPlayingPlayersService). Its architectures follow the app's.\n# It's built and signed in TEMP_DIR: Xcode's script sandbox only lets the script\n# write the declared outputs in Resources, and codesign needs a scratch file.\nset -eu\nsrc=\"${SRCROOT}/nowplaying-players\"\nout=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nwork=\"${TEMP_DIR}/nowplaying-players\"\nmkdir -p \"$work\" \"$out\"\narch_flags=\"\"\nfor arch in ${ARCHS}; do\n    arch_flags=\"$arch_flags -arch $arch\"\ndone\nxcrun clang -O2 -fobjc-arc -Wall -Wextra -Wno-unused-parameter $arch_flags \\\n    -isysroot \"${SDKROOT}\" -mmacosx-version-min=\"${MACOSX_DEPLOYMENT_TARGET}\" \\\n    -dynamiclib -install_name @rpath/NowPlayingPlayers.dylib -framework Foundation \\\n    \"$src/NowPlayingPlayers.m\" -o \"$work/NowPlayingPlayers.dylib\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" --timestamp=none \"$work/NowPlayingPlayers.dylib\"\ncp \"$work/NowPlayingPlayers.dylib\" \"$out/NowPlayingPlayers.dylib\"\ncp \"$src/nowplaying-players.pl\" \"$out/nowplaying-players.pl\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		11F7484B2EC9AABA00F841DB /* Sources */ = {

@@ -1027,7 +1027,9 @@ extension ContentView {
             return coordinator.musicLiveActivityEnabled && (musicManager.isPlaying || !musicManager.isPlayerIdle)
 
         case .open:
+            // With other players to swipe to, the swipe moves between them (MediaPlayerPager).
             return coordinator.currentView == .home && !musicManager.isPlayerIdle && isHoveringMusicArea
+                && !NowPlayingPlayersService.shared.hasOtherPlayers
         }
     }
 }

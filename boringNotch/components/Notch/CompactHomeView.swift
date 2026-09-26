@@ -45,10 +45,12 @@ struct CompactNotchView: View {
     private var selectedTab: some View {
         switch coordinator.currentView {
         case .home:
-            CompactHomeView(
-                albumArtNamespace: albumArtNamespace,
-                horizontalMediaGestureFeedback: horizontalMediaGestureFeedback
-            )
+            MediaPlayerPager(layout: .compact) {
+                CompactHomeView(
+                    albumArtNamespace: albumArtNamespace,
+                    horizontalMediaGestureFeedback: horizontalMediaGestureFeedback
+                )
+            }
             .onHover { hovering in
                 isHoveringMusicArea = hovering
             }
@@ -251,6 +253,7 @@ struct CompactHomeView: View {
                     .resizable().scaledToFill()
                     .frame(width: albumArtWidth, height: albumArtWidth)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .mediaPlayerArtAnchor()
                     .albumArtHoverGlow(musicManager.albumArt, cornerRadius: 10, radius: 5.5)
 
                 // Badge scaled to this art. AlbumArtView's is a fixed 30pt with

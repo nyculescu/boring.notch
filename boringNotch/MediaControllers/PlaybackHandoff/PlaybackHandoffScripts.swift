@@ -119,31 +119,82 @@ enum PlaybackHandoffScripts {
         })();
         """
 
+    /// Starts again what a page had playing, the same way round as
+    /// pauseMediaJavaScript: the site's own Play button next to the media it
+    /// had got furthest into, else the space bar, and only if that media is
+    /// still paused a second later, the media element itself. Runs as one
+    /// line, so no `//` comments.
+    static let playMediaJavaScript = """
+        (function () {
+            var paused = Array.prototype.filter.call(document.querySelectorAll('video, audio'), function (media) {
+                return media.paused && !media.ended && media.readyState > 0;
+            });
+            if (paused.length === 0) { return 0; }
+            paused.sort(function (a, b) { return b.currentTime - a.currentTime; });
+            var media = paused[0];
+            var isPlay = function (control) {
+                var label = (control.getAttribute('aria-label') || control.getAttribute('title') || '').trim();
+                return /^play(\\s*\\(.*\\))?$/i.test(label);
+            };
+            var control = null;
+            for (var node = media.parentElement, depth = 0; node && !control && depth < 8; node = node.parentElement, depth++) {
+                control = Array.prototype.find.call(node.querySelectorAll('button, [role="button"]'), isPlay) || null;
+            }
+            if (control) {
+                control.click();
+            } else {
+                ['keydown', 'keyup'].forEach(function (type) {
+                    media.dispatchEvent(new KeyboardEvent(type, {
+                        key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, cancelable: true
+                    }));
+                });
+            }
+            setTimeout(function () {
+                if (media.paused) {
+                    var started = media.play();
+                    if (started && started.catch) { started.catch(function () {}); }
+                }
+            }, 1000);
+            return 1;
+        })();
+        """
+
     /// The script that pauses `player`, or nil when its app can't be paused
     /// with AppleScript (VLC gets raw Apple Events instead: see VLCRemote).
     /// Every script returns {number of things paused, error message or ""}.
     static func pause(_ player: PlaybackHandoffPolicy.Player) -> String? {
-        let bundleIdentifier = player.bundleIdentifier
-        if bundleIdentifier == MediaAppBundleID.spotify {
+        if player.bundleIdentifier == MediaAppBundleID.spotify {
             return pauseSpotify
         }
+        return tabScript(for: player, javaScript: pauseMediaJavaScript)
+    }
+
+    /// The script that starts `player`'s page playing again, or nil when it
+    /// isn't a browser tab this can reach. Returns like pause(_:).
+    static func play(_ player: PlaybackHandoffPolicy.Player) -> String? {
+        tabScript(for: player, javaScript: playMediaJavaScript)
+    }
+
+    /// Runs `javaScript` in the tabs of `player`'s browser that show its title.
+    private static func tabScript(for player: PlaybackHandoffPolicy.Player, javaScript: String) -> String? {
+        let bundleIdentifier = player.bundleIdentifier
         // An empty title would match every tab.
         let title = player.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return nil }
         if chromiumBrowsers.contains(bundleIdentifier) {
-            return pauseTabs(
+            return runInTabs(
                 app: bundleIdentifier,
                 titleProperty: "title",
                 title: title,
-                run: "execute tab tabIndex of browserWindow javascript \(quoted(pauseMediaJavaScript))"
+                run: "execute tab tabIndex of browserWindow javascript \(quoted(javaScript))"
             )
         }
         if safariBundleIdentifiers.contains(bundleIdentifier) {
-            return pauseTabs(
+            return runInTabs(
                 app: "com.apple.Safari",
                 titleProperty: "name",
                 title: title,
-                run: "do JavaScript \(quoted(pauseMediaJavaScript)) in tab tabIndex of browserWindow"
+                run: "do JavaScript \(quoted(javaScript)) in tab tabIndex of browserWindow"
             )
         }
         return nil
@@ -182,7 +233,7 @@ enum PlaybackHandoffScripts {
 
     /// Runs `run` in each tab whose title contains `title`; titles are read
     /// a window at a time.
-    private static func pauseTabs(app: String, titleProperty: String, title: String, run: String) -> String {
+    private static func runInTabs(app: String, titleProperty: String, title: String, run: String) -> String {
         """
         set pausedTabs to 0
         set failure to ""

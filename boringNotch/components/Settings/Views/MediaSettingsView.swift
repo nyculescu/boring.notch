@@ -133,6 +133,14 @@ struct MediaSettingsView: View {
                 Defaults.Toggle(key: .showRemainingTime) {
                     Text("Show remaining time instead of duration")
                 }
+                Defaults.Toggle(key: .mediaPlayerPages) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Swipe between players")
+                        footerText("Swipe left or right with two fingers on the player to see the other apps playing media.")
+                        footerText("Play or pause them there. In the open notch this takes over from changing tracks by swiping.")
+                        footerText("Works with Now Playing as the Music Source.")
+                    }
+                }
             } header: {
                 Text("Media controls")
             }  footer: {

@@ -110,6 +110,7 @@ struct AlbumArtView: View {
                 RoundedRectangle(
                     cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.opened)
             )
+            .mediaPlayerArtAnchor()
             .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
     }
 
@@ -583,11 +584,13 @@ struct NotchHomeView: View {
 
     private var mainContent: some View {
         HStack(alignment: .top, spacing: (shouldShowCamera && Defaults[.showCalendar]) ? 10 : 15) {
-            MusicPlayerView(
-                albumArtNamespace: albumArtNamespace,
-                horizontalMediaGestureFeedback: horizontalMediaGestureFeedback,
-                isHoveringMusicArea: $isHoveringMusicArea
-            )
+            MediaPlayerPager(layout: .standard) {
+                MusicPlayerView(
+                    albumArtNamespace: albumArtNamespace,
+                    horizontalMediaGestureFeedback: horizontalMediaGestureFeedback,
+                    isHoveringMusicArea: $isHoveringMusicArea
+                )
+            }
 
             if Defaults[.showCalendar] {
                 CalendarView()

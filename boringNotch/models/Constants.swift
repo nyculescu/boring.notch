@@ -539,6 +539,8 @@ extension Defaults.Keys {
     )
     static let pauseOtherPlayers = Key<Bool>("pauseOtherPlayers", default: true)
     static let resumeAppleMusicAfterOtherPlayers = Key<Bool>("resumeAppleMusicAfterOtherPlayers", default: false)
+    /// Pages in the Media tab for the other apps playing media.
+    static let mediaPlayerPages = Key<Bool>("mediaPlayerPages", default: true)
 
     // MARK: Advanced Settings
     static let useCustomAccentColor = Key<Bool>("useCustomAccentColor", default: false)
