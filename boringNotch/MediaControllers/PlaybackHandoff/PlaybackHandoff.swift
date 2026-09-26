@@ -82,6 +82,10 @@ final class PlaybackHandoff {
 
     private func pause(_ player: PlaybackHandoffPolicy.Player, for newPlayer: String) async {
         let app = player.bundleIdentifier
+        if app == MediaAppBundleID.vlc {
+            await pauseVLC(for: newPlayer)
+            return
+        }
         guard let script = PlaybackHandoffScripts.pause(player) else {
             Log.music.info("Can't pause \(app, privacy: .public): it has no way to be scripted")
             return
@@ -100,6 +104,20 @@ final class PlaybackHandoff {
             }
         } catch {
             Log.music.error("Couldn't pause \(app, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func pauseVLC(for newPlayer: String) async {
+        guard Self.isRunning(MediaAppBundleID.vlc) else { return }
+        do {
+            let paused = try await Task.detached(priority: .userInitiated) {
+                try VLCRemote.pauseIfPlaying()
+            }.value
+            if paused {
+                Log.music.notice("Paused \(MediaAppBundleID.vlc, privacy: .public): \(newPlayer, privacy: .public) started playing")
+            }
+        } catch {
+            Log.music.error("Couldn't pause VLC: \(error.localizedDescription, privacy: .public)")
         }
     }
 

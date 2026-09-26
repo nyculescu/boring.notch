@@ -316,6 +316,25 @@ final class PlaybackHandoffPolicyTests: XCTestCase {
         XCTAssertNotNil(PlaybackHandoffScripts.pause(.init(bundleIdentifier: MediaAppBundleID.spotify, title: "")))
     }
 
+    func testVLCIsPausedWithAppleEventsNotAppleScript() {
+        // Compiling AppleScript against VLC's old-style dictionary crashed the sandboxed app.
+        XCTAssertNil(PlaybackHandoffScripts.pause(.init(bundleIdentifier: MediaAppBundleID.vlc, title: "")))
+
+        let code = VLCRemote.fourCharCode
+        let isPlaying = VLCRemote.isPlayingEvent()
+        XCTAssertEqual(isPlaying.eventClass, code("core"))
+        XCTAssertEqual(isPlaying.eventID, code("getd"))
+        let property = isPlaying.paramDescriptor(forKeyword: code("----"))
+        XCTAssertEqual(property?.descriptorType, code("obj "))
+        XCTAssertEqual(property?.forKeyword(code("seld"))?.typeCodeValue, code("AAPL"), "VLC's `playing`")
+        XCTAssertEqual(property?.forKeyword(code("want"))?.typeCodeValue, code("prop"))
+
+        let toggle = VLCRemote.toggleEvent()
+        XCTAssertEqual(toggle.eventClass, code("VLC#"))
+        XCTAssertEqual(toggle.eventID, code("VLC1"), "VLC's `play`, which toggles")
+        XCTAssertEqual(toggle.attributeDescriptor(forKeyword: code("addr"))?.descriptorType, code("bund"), "Aimed at VLC by bundle ID")
+    }
+
     func testPauseOutcomeReadsTheCountAndTheError() {
         let list = NSAppleEventDescriptor.list()
         list.insert(NSAppleEventDescriptor(int32: 0), at: 0)

@@ -119,7 +119,8 @@ enum PlaybackHandoffScripts {
         })();
         """
 
-    /// The script that pauses `player`, or nil when its app can't be paused.
+    /// The script that pauses `player`, or nil when its app can't be paused
+    /// with AppleScript (VLC gets raw Apple Events instead: see VLCRemote).
     /// Every script returns {number of things paused, error message or ""}.
     static func pause(_ player: PlaybackHandoffPolicy.Player) -> String? {
         let bundleIdentifier = player.bundleIdentifier
