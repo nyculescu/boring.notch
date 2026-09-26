@@ -137,6 +137,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var screenLockedObserver: Any?
     private var screenUnlockedObserver: Any?
     private var observers: [Any] = []
+    /// When a window the user can close (Settings, the notes list) last closed.
+    private var lastWindowClose: Date?
 
     /// Kept for existing internal readers; the state itself moved to the manager.
     var windows: [String: NSWindow] { windowManager.windows }
@@ -146,6 +148,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
+    }
+
+    /// Other apps that quit an app once its last window closes would quit
+    /// Boring Notch along with its Settings window; see QuitRequestGuard.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let request = QuitRequestGuard.currentQuitRequest(),
+              QuitRequestGuard.shouldRefuse(
+                request,
+                ownPID: ProcessInfo.processInfo.processIdentifier,
+                lastWindowClose: lastWindowClose,
+                now: Date()
+              )
+        else {
+            return .terminateNow
+        }
+        let senderName = NSRunningApplication(processIdentifier: request.senderPID)?.bundleIdentifier
+            ?? "pid \(request.senderPID)"
+        Log.app.notice("Not quitting: \(senderName, privacy: .public) asked right after a window closed")
+        return .terminateCancel
+    }
+
+    private func recordWindowCloses() {
+        observers.append(NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            // The notch itself is a borderless panel; titled windows are the
+            // ones a close button (or Command-W) closes.
+            guard let window = notification.object as? NSWindow, window.styleMask.contains(.titled) else { return }
+            MainActor.assumeIsolated {
+                self?.lastWindowClose = Date()
+            }
+        })
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -190,6 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         SettingsWindowController.shared.setCamera(camera)
+        recordWindowCloses()
 
         NotificationCenter.default.addObserver(
             self,
