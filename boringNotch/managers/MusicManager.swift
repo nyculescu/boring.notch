@@ -80,6 +80,9 @@ final class MusicManager: ObservableObject {
     // Active controller
     private var activeController: (any MediaControllerProtocol)?
 
+    // Pauses the player that was interrupted when another starts (Now Playing only)
+    private let playbackHandoff = PlaybackHandoff()
+
     // Published properties for UI
     @Published var songTitle: String = ""
     @Published var artistName: String = ""
@@ -175,6 +178,7 @@ final class MusicManager: ObservableObject {
         flipWorkItem?.cancel()
         transitionWorkItem?.cancel()
         (activeController as? any NowPlayingRuntimeControlling)?.stopRuntimeStream()
+        playbackHandoff.reset()
 
         activeController = nil
         effectiveMediaController = nil
@@ -356,6 +360,7 @@ final class MusicManager: ObservableObject {
         runtimeFailureTask = nil
         (activeController as? any NowPlayingRuntimeControlling)?.stopRuntimeStream()
         controllerCancellables.removeAll()
+        playbackHandoff.reset()
 
         flipWorkItem?.cancel()
         if isReplacingController {
@@ -376,6 +381,14 @@ final class MusicManager: ObservableObject {
                     return
                 }
                 self.updateFromPlaybackState(state)
+                // Only Now Playing sees other apps start and stop.
+                if type == .nowPlaying {
+                    self.playbackHandoff.nowPlayingChanged(
+                        bundleIdentifier: state.bundleIdentifier,
+                        title: state.title,
+                        isPlaying: state.isPlaying
+                    )
+                }
             }
             .store(in: &controllerCancellables)
 

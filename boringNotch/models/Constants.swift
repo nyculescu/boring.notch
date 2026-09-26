@@ -537,6 +537,8 @@ extension Defaults.Keys {
         "lastSupportedNowPlayingBundleIdentifier",
         default: nil
     )
+    static let pauseOtherPlayers = Key<Bool>("pauseOtherPlayers", default: true)
+    static let resumeAppleMusicAfterOtherPlayers = Key<Bool>("resumeAppleMusicAfterOtherPlayers", default: false)
 
     // MARK: Advanced Settings
     static let useCustomAccentColor = Key<Bool>("useCustomAccentColor", default: false)

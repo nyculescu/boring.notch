@@ -17,6 +17,7 @@ struct MediaSettingsView: View {
     @Default(.sliderColor) var sliderColor
 
     @Default(.enableLyrics) var enableLyrics
+    @Default(.pauseOtherPlayers) private var pauseOtherPlayers
     @ObservedObject private var musicManager = MusicManager.shared
 
     private var realtimeAudioWaveformSupported: Bool {
@@ -43,6 +44,32 @@ struct MediaSettingsView: View {
                 Text("Media Source")
             } footer: {
                 mediaSourceFooter
+            }
+
+            Section {
+                Defaults.Toggle(key: .pauseOtherPlayers) {
+                    Text("Pause what's playing when another app starts")
+                }
+                Defaults.Toggle(key: .resumeAppleMusicAfterOtherPlayers) {
+                    Text("Resume Apple Music when that app stops")
+                }
+                .disabled(!pauseOtherPlayers)
+            } header: {
+                Text("One player at a time")
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    footerText("Starting a video in Brave pauses Apple Music, and playing music pauses the video.")
+                    footerText("With resume on, Apple Music plays again a second after the video stops.")
+                    footerText(
+                        "Browsers can only be paused with Allow JavaScript from Apple Events on: under View > Developer in Brave and Chrome."
+                    )
+                    footerText(
+                        "In Safari it's under Settings > Developer, shown once Show features for web developers is on in Settings > Advanced."
+                    )
+                    if musicManager.effectiveMediaController != .nowPlaying {
+                        footerText("Works when Now Playing is the Music Source.")
+                    }
+                }
             }
 
             Section {

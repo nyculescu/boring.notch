@@ -328,6 +328,7 @@
 		11DAAB583061BE3000E15887 /* extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = extensions; sourceTree = "<group>"; };
 		11F748502EC9AABA00F841DB /* BoringNotchXPCHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11F7485C2EC9AABA00F841DB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = BoringNotchXPCHelper; sourceTree = "<group>"; };
 		8137A8BA990F4D9CBA56CC7A /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
+		385329E12807C191A4AC80B3 /* PlaybackHandoff */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = PlaybackHandoff; sourceTree = "<group>"; };
 		A5167213301F85B40018095A /* boringNotchTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = boringNotchTests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -440,6 +441,7 @@
 		1153BD8E2D986B1F00979FB0 /* MediaControllers */ = {
 			isa = PBXGroup;
 			children = (
+				385329E12807C191A4AC80B3 /* PlaybackHandoff */,
 				1132E5232E78D6DA0068732D /* YouTubeMusicController */,
 				1153BD8D2D986B1F00979FB0 /* MediaControllerProtocol.swift */,
 				1153BD922D986E4300979FB0 /* AppleMusicController.swift */,
@@ -829,6 +831,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				112FB72F2CCF12CC0015238C /* private */,
+				385329E12807C191A4AC80B3 /* PlaybackHandoff */,
 				11DAAB303061BDED00E15887 /* Settings */,
 				11DAAB463061BE1600E15887 /* LiveActivities */,
 				11DAAB583061BE3000E15887 /* extensions */,
@@ -1328,7 +1331,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSBackgroundOnly = NO;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app uses AppleEvents to control music";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Boring Notch uses Apple Events to control your music, and to pause what is playing in your browser when another app starts playing.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app uses the calendar to display your calendar events";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera to display a live camera view";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app matches notification senders to your contacts to show their photo";
@@ -1397,7 +1400,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSBackgroundOnly = NO;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app uses AppleEvents to control music";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Boring Notch uses Apple Events to control your music, and to pause what is playing in your browser when another app starts playing.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app uses the calendar to display your calendar events";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera to display a live camera view";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app matches notification senders to your contacts to show their photo";
