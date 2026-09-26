@@ -130,8 +130,8 @@ if $install; then
     # Only this account's copy is stopped; another logged-in account keeps its
     # instance until it relaunches. Boring Notch ignores SIGTERM (AppKit defers
     # it for apps that can't be suddenly terminated), so escalate to SIGKILL.
-    # Nothing is lost: the shelf saves a second after each change and
-    # clipboard history is memory-only by design.
+    # Nothing is lost: the shelf and clipboard history save a second after
+    # each change, and sticky notes half a second after.
     if is_running; then
         pkill -TERM -u "$uid" -x "Boring Notch" || true
         wait_while_running 6
