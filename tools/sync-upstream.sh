@@ -49,30 +49,29 @@ incoming=$(git rev-list --count "$old_base..$upstream")
 
 if (( incoming == 0 )); then
     echo "Already up to date with $upstream (latest release tag: $new_tag)."
-    exit 0
+else
+    echo "Rebasing $branch onto $upstream ($incoming new upstream commits)..."
+    if ! git rebase "$upstream"; then
+        echo
+        echo "The rebase stopped on a conflict. Fix the listed files, 'git add' them and run"
+        echo "'git rebase --continue', or run 'git rebase --abort' to go back to where you were."
+        exit 1
+    fi
+    echo "Done: $branch has $(git rev-list --count "$upstream..HEAD") commit(s) on top of $upstream."
+    if [[ "$new_tag" != "$old_tag" ]]; then
+        echo "New upstream release tag: $new_tag (previously $old_tag). Rebuild with tools/build-rc.sh --install."
+    fi
 fi
 
-echo "Rebasing $branch onto $upstream ($incoming new upstream commits)..."
-if ! git rebase "$upstream"; then
-    echo
-    echo "The rebase stopped on a conflict. Fix the listed files, 'git add' them and run"
-    echo "'git rebase --continue', or run 'git rebase --abort' to go back to where you were."
-    exit 1
-fi
-
-echo "Done: $branch has $(git rev-list --count "$upstream..HEAD") commit(s) on top of $upstream."
-if [[ "$new_tag" != "$old_tag" ]]; then
-    echo "New upstream release tag: $new_tag (previously $old_tag). Rebuild with tools/build-rc.sh --install."
-fi
-
-# The rebase rewrote your commits, so the copy on your fork needs a force-push;
-# --force-with-lease refuses if the fork has commits this checkout hasn't seen.
-# Never push toward the upstream remote itself.
+# A rebase rewrites your commits, so updating the copy on your fork can need a
+# force-push; --force-with-lease still refuses if the fork has commits this
+# checkout hasn't seen. Never push toward the upstream remote itself.
 push_remote=$(git config "branch.$branch.remote" || true)
-if [[ -n "$push_remote" && "$push_remote" != "$remote" ]]; then
+if [[ -n "$push_remote" && "$push_remote" != "$remote" ]] \
+    && [[ "$(git rev-parse HEAD)" != "$(git rev-parse --verify --quiet '@{u}' || true)" ]]; then
     if $push; then
         git push --force-with-lease
     else
-        echo "Update your fork with: git push --force-with-lease (or rerun with --push)."
+        echo "Your fork is behind this branch: git push --force-with-lease (or rerun with --push)."
     fi
 fi
